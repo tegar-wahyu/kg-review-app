@@ -36,7 +36,7 @@ export default function LoginPage() {
     <main className="shell-center">
       <form className="auth-card" onSubmit={onSubmit}>
         <h1>Knowledge graph review</h1>
-        <p>Sign in as predefined admin or expert user.</p>
+        <p>Sign in with your assigned admin or expert account.</p>
 
         <label>Username</label>
         <input value={username} onChange={(e) => setUsername(e.target.value)} required />
@@ -54,10 +54,6 @@ export default function LoginPage() {
         <button type="submit" className="btn-primary" disabled={loading}>
           {loading ? "Signing in..." : "Sign in"}
         </button>
-
-        <div className="credential-hint">
-          <strong>Default:</strong> admin/admin123 and expert/expert123
-        </div>
       </form>
     </main>
   );

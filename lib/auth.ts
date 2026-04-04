@@ -5,18 +5,46 @@ import { SessionUser, UserRole } from "@/lib/types";
 
 export const SESSION_COOKIE = "kg_session";
 
-const USERS = [
-  {
-    username: process.env.ADMIN_USERNAME || "admin",
-    password: process.env.ADMIN_PASSWORD || "admin123",
-    role: "admin" as const,
-  },
-  {
-    username: process.env.EXPERT_USERNAME || "expert",
-    password: process.env.EXPERT_PASSWORD || "expert123",
-    role: "expert" as const,
-  },
-];
+type AuthUser = {
+  username: string;
+  password: string;
+  role: UserRole;
+};
+
+const EXPERT_ENV_KEYS = [
+  { usernameEnv: "EXPERT_KIMIA_1_USERNAME", passwordEnv: "EXPERT_KIMIA_1_PASSWORD" },
+  { usernameEnv: "EXPERT_KIMIA_2_USERNAME", passwordEnv: "EXPERT_KIMIA_2_PASSWORD" },
+  { usernameEnv: "EXPERT_FISIKA_1_USERNAME", passwordEnv: "EXPERT_FISIKA_1_PASSWORD" },
+  { usernameEnv: "EXPERT_FISIKA_2_USERNAME", passwordEnv: "EXPERT_FISIKA_2_PASSWORD" },
+  { usernameEnv: "EXPERT_BIOLOGI_1_USERNAME", passwordEnv: "EXPERT_BIOLOGI_1_PASSWORD" },
+  { usernameEnv: "EXPERT_BIOLOGI_2_USERNAME", passwordEnv: "EXPERT_BIOLOGI_2_PASSWORD" },
+] as const;
+
+function getExpertUsers(): AuthUser[] {
+  return EXPERT_ENV_KEYS.flatMap(({ usernameEnv, passwordEnv }) => {
+    const username = process.env[usernameEnv]?.trim();
+    const password = process.env[passwordEnv];
+
+    if (!username || !password) {
+      return [];
+    }
+
+    return [{ username, password, role: "expert" as const }];
+  });
+}
+
+function getUsers(): AuthUser[] {
+  return [
+    {
+      username: process.env.ADMIN_USERNAME || "admin",
+      password: process.env.ADMIN_PASSWORD || "admin123",
+      role: "admin" as const,
+    },
+    ...getExpertUsers(),
+  ];
+}
+
+const USERS = getUsers();
 
 function secretKey() {
   return new TextEncoder().encode(
