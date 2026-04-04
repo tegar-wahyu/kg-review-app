@@ -314,12 +314,27 @@ textarea {
 }
 
 .triple-desc {
-  font-size: 16px;
+  font-size: 20px;
   color: #5b667a;
   margin-bottom: 14px;
-  line-height: 1.7;
+  line-height: 1.8;
   border-left: 4px solid #e2e8f0;
   padding-left: 14px;
+}
+
+.triple-desc .katex {
+  font-size: 1.18em;
+}
+
+.triple-desc .katex-display {
+  margin: 0.7em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.node .katex,
+.rel-badge .katex {
+  font-size: 1em;
 }
 
 .rating-group {
@@ -650,6 +665,11 @@ textarea {
     font-size: 12px;
     min-height: 26px;
     padding: 4px 10px;
+  }
+
+  .triple-desc {
+    font-size: 18px;
+    line-height: 1.75;
   }
 
   .course-card {

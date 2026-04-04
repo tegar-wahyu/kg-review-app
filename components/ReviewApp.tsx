@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { extractTriples } from "@/lib/extract";
+import LatexText from "@/components/LatexText";
 import {
   CourseRecord,
   ExtractedTriple,
@@ -306,14 +307,14 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
               </div>
 
               <div className="triple-body">
-                <span className="node">{triple.subject}</span>
+                <LatexText as="span" className="node" text={triple.subject} />
                 <span className="arrow">→</span>
-                <span className="rel-badge">{triple.relation}</span>
+                <LatexText as="span" className="rel-badge" text={triple.relation} />
                 <span className="arrow">→</span>
-                <span className="node">{triple.target}</span>
+                <LatexText as="span" className="node" text={triple.target} />
               </div>
 
-              <div className="triple-desc">{triple.description}</div>
+              <LatexText as="div" className="triple-desc" text={triple.description} />
 
               <div className="rating-group">
                 <div className="rating-label-row">
