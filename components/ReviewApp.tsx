@@ -407,15 +407,34 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
 
         {currentFilter === "all" ? (
           <div className="triple-card" style={{ borderStyle: "dashed" }}>
-            <div style={{ fontSize: "13px", fontWeight: 500, marginBottom: "10px" }}>Tambah triple yang belum ada</div>
-            <div className="missing-form" style={{ display: "block" }}>
-              <input type="text" id="m-subject" placeholder="Subjek (mis. Enzim)" />
-              <input type="text" id="m-relation" placeholder="Relasi (mis. MEMBUTUHKAN)" />
-              <input type="text" id="m-target" placeholder="Target (mis. Air)" />
-              <input type="text" id="m-desc" placeholder="Deskripsi (opsional)" />
-              <button className="btn-primary" onClick={addMissing} style={{ fontSize: "12px", padding: "6px 14px" }}>
-                Tambah triple
-              </button>
+            <div className="missing-title">Tambah triple yang belum ada</div>
+            <div className="missing-form">
+              <div className="missing-graph">
+                <div className="missing-field missing-subject">
+                  <label htmlFor="m-subject">Subjek</label>
+                  <input type="text" id="m-subject" placeholder="mis. Enzim" />
+                </div>
+                <span className="missing-arrow" aria-hidden="true">→</span>
+                <div className="missing-field missing-relation">
+                  <label htmlFor="m-relation">Relasi</label>
+                  <input type="text" id="m-relation" placeholder="mis. MEMBUTUHKAN" />
+                </div>
+                <span className="missing-arrow" aria-hidden="true">→</span>
+                <div className="missing-field missing-target">
+                  <label htmlFor="m-target">Target</label>
+                  <input type="text" id="m-target" placeholder="mis. Air" />
+                </div>
+              </div>
+
+              <div className="missing-note-row">
+                <div className="missing-field missing-desc">
+                  <label htmlFor="m-desc">Deskripsi tambahan</label>
+                  <input type="text" id="m-desc" placeholder="Opsional, jelaskan relasi ini bila perlu" />
+                </div>
+                <button className="btn-primary missing-submit" onClick={addMissing}>
+                  Tambah triple
+                </button>
+              </div>
             </div>
           </div>
         ) : null}

@@ -672,10 +672,70 @@ textarea {
 }
 
 .missing-form {
-  background: var(--color-background-secondary);
-  border-radius: var(--border-radius-md);
-  padding: 12px;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border-radius: var(--border-radius-lg);
+  padding: 16px;
   margin-top: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.missing-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 10px;
+}
+
+.missing-graph {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) auto minmax(0, 1fr) auto minmax(0, 1.1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.missing-field {
+  display: grid;
+  gap: 6px;
+}
+
+.missing-field label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.missing-subject input,
+.missing-target input {
+  border-radius: 18px;
+}
+
+.missing-relation input {
+  border-radius: 999px;
+  text-align: center;
+  background: var(--color-background-primary);
+  border-color: var(--color-border-tertiary);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.missing-arrow {
+  color: #64748b;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.missing-note-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 14px;
+}
+
+.missing-submit {
+  min-height: 40px;
 }
 
 .chapter-tag {
@@ -778,6 +838,22 @@ textarea {
   .triple-desc {
     font-size: 18px;
     line-height: 1.75;
+  }
+
+  .missing-graph {
+    grid-template-columns: 1fr;
+  }
+
+  .missing-arrow {
+    display: none;
+  }
+
+  .missing-note-row {
+    grid-template-columns: 1fr;
+  }
+
+  .missing-submit {
+    width: 100%;
   }
 
   .course-card {
