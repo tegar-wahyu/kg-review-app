@@ -1,16 +1,47 @@
 import { CourseRecord, ReviewProgress } from "@/lib/types";
 
 const COURSES_KEY = "kg:courses";
-const memoryCourses = new Map<string, CourseRecord>();
-const memoryProgress = new Map<string, ReviewProgress>();
+
+type MemoryStore = {
+  courses: Map<string, CourseRecord>;
+  progress: Map<string, ReviewProgress>;
+};
+
+declare global {
+  var __kgReviewMemoryStore: MemoryStore | undefined;
+  var __kgReviewStorageModeLogged: boolean | undefined;
+}
+
+function getMemoryStore(): MemoryStore {
+  if (!globalThis.__kgReviewMemoryStore) {
+    globalThis.__kgReviewMemoryStore = {
+      courses: new Map<string, CourseRecord>(),
+      progress: new Map<string, ReviewProgress>(),
+    };
+  }
+
+  return globalThis.__kgReviewMemoryStore;
+}
+
+function resolveKVConfig() {
+  const url = process.env.KV_REST_API_URL;
+  const token = process.env.KV_REST_API_TOKEN;
+  const enabled = Boolean(url && token);
+
+  if (!globalThis.__kgReviewStorageModeLogged) {
+    console.info(`[storage] mode=${enabled ? "kv" : "memory"}`);
+    globalThis.__kgReviewStorageModeLogged = true;
+  }
+
+  return { enabled, url, token };
+}
 
 function kvEnabled() {
-  return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+  return resolveKVConfig().enabled;
 }
 
 async function kvCommand(args: string[]) {
-  const url = process.env.KV_REST_API_URL;
-  const token = process.env.KV_REST_API_TOKEN;
+  const { url, token } = resolveKVConfig();
 
   if (!url || !token) {
     throw new Error("KV env vars are missing");
@@ -59,7 +90,8 @@ export async function getCourses(): Promise<CourseRecord[]> {
     return readCoursesFromKV();
   }
 
-  return Array.from(memoryCourses.values()).sort((a, b) =>
+  const store = getMemoryStore();
+  return Array.from(store.courses.values()).sort((a, b) =>
     b.uploadedAt.localeCompare(a.uploadedAt),
   );
 }
@@ -77,7 +109,8 @@ export async function upsertCourse(course: CourseRecord): Promise<void> {
     return;
   }
 
-  memoryCourses.set(course.id, course);
+  const store = getMemoryStore();
+  store.courses.set(course.id, course);
 }
 
 export async function updateCoursePublished(courseId: string, published: boolean): Promise<CourseRecord | null> {
@@ -96,11 +129,12 @@ export async function updateCoursePublished(courseId: string, published: boolean
     return updated;
   }
 
-  const course = memoryCourses.get(courseId);
+  const store = getMemoryStore();
+  const course = store.courses.get(courseId);
   if (!course) return null;
 
   const updated = { ...course, published };
-  memoryCourses.set(courseId, updated);
+  store.courses.set(courseId, updated);
   return updated;
 }
 
@@ -118,7 +152,8 @@ export async function getProgress(username: string, courseId: string): Promise<R
     }
   }
 
-  return memoryProgress.get(memoryKey(username, courseId)) || null;
+  const store = getMemoryStore();
+  return store.progress.get(memoryKey(username, courseId)) || null;
 }
 
 export async function saveProgress(username: string, courseId: string, progress: ReviewProgress): Promise<void> {
@@ -129,5 +164,6 @@ export async function saveProgress(username: string, courseId: string, progress:
     return;
   }
 
-  memoryProgress.set(memoryKey(username, courseId), progress);
+  const store = getMemoryStore();
+  store.progress.set(memoryKey(username, courseId), progress);
 }
