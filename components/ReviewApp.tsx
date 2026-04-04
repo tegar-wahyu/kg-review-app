@@ -1,0 +1,366 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { extractTriples } from "@/lib/extract";
+import {
+  CourseRecord,
+  ExtractedTriple,
+  MissingTriple,
+  ReviewProgress,
+  ReviewRating,
+} from "@/lib/types";
+
+type ReviewPayload = {
+  course: CourseRecord;
+  progress: ReviewProgress | null;
+};
+
+type SessionPayload = {
+  user: {
+    username: string;
+    role: "admin" | "expert";
+  };
+};
+
+export default function ReviewApp({ courseId }: { courseId: string }) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [triples, setTriples] = useState<ExtractedTriple[]>([]);
+  const [ratings, setRatings] = useState<Record<string, ReviewRating>>({});
+  const [comments, setComments] = useState<Record<string, string>>({});
+  const [missingTriples, setMissingTriples] = useState<MissingTriple[]>([]);
+  const [currentFilter, setCurrentFilter] = useState<"all" | "unrated" | "flagged">("all");
+  const [chapterOrder, setChapterOrder] = useState<string[]>([]);
+  const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
+  const [datasetTitle, setDatasetTitle] = useState("Knowledge graph expert review");
+  const [saveState, setSaveState] = useState("Not saved");
+  const [readyToSave, setReadyToSave] = useState(false);
+  const [role, setRole] = useState<"admin" | "expert">("expert");
+
+  useEffect(() => {
+    const load = async () => {
+      const me = await fetch("/api/auth/me", { cache: "no-store" });
+      if (!me.ok) {
+        router.replace("/login");
+        return;
+      }
+
+      const meData = (await me.json()) as SessionPayload;
+      setRole(meData.user.role);
+
+      const res = await fetch(`/api/review/${courseId}`, { cache: "no-store" });
+      if (!res.ok) {
+        setError("Unable to load review data.");
+        setLoading(false);
+        return;
+      }
+
+      const data = (await res.json()) as ReviewPayload;
+      const extracted = extractTriples(data.course.payload);
+      const chapters = Array.from(new Set(extracted.map((item) => item.chapter || "Uncategorized")));
+
+      setDatasetTitle(data.course.title || "Knowledge graph expert review");
+      setTriples(extracted);
+      setChapterOrder(chapters.length ? chapters : ["Uncategorized"]);
+      setCurrentChapterIndex(0);
+
+      if (data.progress) {
+        setRatings(data.progress.ratings || {});
+        setComments(data.progress.comments || {});
+        setMissingTriples(data.progress.missingTriples || []);
+      }
+
+      setLoading(false);
+      setReadyToSave(true);
+      setSaveState("Loaded");
+    };
+
+    load();
+  }, [courseId, router]);
+
+  useEffect(() => {
+    if (!readyToSave) return;
+
+    const timer = setTimeout(async () => {
+      setSaveState("Saving...");
+
+      const res = await fetch(`/api/review/${courseId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ratings, comments, missingTriples }),
+      });
+
+      if (!res.ok) {
+        setSaveState("Save failed");
+        return;
+      }
+
+      setSaveState(`Saved ${new Date().toLocaleTimeString()}`);
+    }, 700);
+
+    return () => clearTimeout(timer);
+  }, [ratings, comments, missingTriples, readyToSave, courseId]);
+
+  const currentChapterName = chapterOrder[currentChapterIndex] || chapterOrder[0] || "";
+
+  const chapterTriples = useMemo(() => {
+    return triples.filter((triple) => (triple.chapter || "Uncategorized") === currentChapterName);
+  }, [triples, currentChapterName]);
+
+  const visibleTriples = useMemo(() => {
+    if (currentFilter === "unrated") {
+      return chapterTriples.filter((triple) => !ratings[String(triple.id)]);
+    }
+
+    if (currentFilter === "flagged") {
+      return chapterTriples.filter((triple) => !triple.glossary_validated);
+    }
+
+    return chapterTriples;
+  }, [chapterTriples, currentFilter, ratings]);
+
+  const chapterRatings = useMemo(() => {
+    const ids = new Set(chapterTriples.map((triple) => String(triple.id)));
+    return Object.entries(ratings)
+      .filter(([id]) => ids.has(String(id)))
+      .map(([, value]) => value);
+  }, [chapterTriples, ratings]);
+
+  const metrics = useMemo(() => {
+    const total = chapterTriples.length;
+    const reviewed = chapterRatings.length;
+    const correct = chapterRatings.filter((value) => value === "correct").length;
+    const partial = chapterRatings.filter((value) => value === "partial").length;
+    const wrong = chapterRatings.filter((value) => value === "wrong").length;
+    const missing = missingTriples.filter((item) => item.chapter === currentChapterName).length;
+    const unrated = total - reviewed;
+
+    const precision = reviewed > 0 ? (correct + partial * 0.5) / reviewed : 0;
+    const recallBase = reviewed + missing;
+    const recall = recallBase > 0 ? (correct + partial * 0.5) / recallBase : 0;
+    const f1 = precision + recall > 0 ? (2 * precision * recall) / (precision + recall) : 0;
+
+    return {
+      total,
+      reviewed,
+      correct,
+      partial,
+      wrong,
+      missing,
+      unrated,
+      precision,
+      recall,
+      f1,
+    };
+  }, [chapterTriples, chapterRatings, missingTriples, currentChapterName]);
+
+  const rate = (id: number, value: ReviewRating) => {
+    setRatings((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const addMissing = () => {
+    const subjectInput = document.getElementById("m-subject") as HTMLInputElement | null;
+    const relationInput = document.getElementById("m-relation") as HTMLInputElement | null;
+    const targetInput = document.getElementById("m-target") as HTMLInputElement | null;
+    const descInput = document.getElementById("m-desc") as HTMLInputElement | null;
+
+    const subject = subjectInput?.value.trim() || "";
+    const relation = relationInput?.value.trim() || "";
+    const target = targetInput?.value.trim() || "";
+    const description = descInput?.value.trim() || "";
+
+    if (!subject || !relation || !target) {
+      alert("Subject, relation, and target are required.");
+      return;
+    }
+
+    setMissingTriples((prev) => [
+      ...prev,
+      {
+        chapter: currentChapterName,
+        subject,
+        relation,
+        target,
+        description,
+      },
+    ]);
+
+    if (subjectInput) subjectInput.value = "";
+    if (relationInput) relationInput.value = "";
+    if (targetInput) targetInput.value = "";
+    if (descInput) descInput.value = "";
+  };
+
+  const exportResults = () => {
+    const output = {
+      summary: {
+        total_triples: triples.length,
+        reviewed: Object.keys(ratings).length,
+        missing_added: missingTriples.length,
+      },
+      rated_triples: triples.map((triple) => ({
+        ...triple,
+        rating: ratings[String(triple.id)] || "unrated",
+        comment: comments[String(triple.id)] || "",
+      })),
+      missing_triples: missingTriples,
+    };
+
+    const blob = new Blob([JSON.stringify(output, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `kg_review_results_${courseId}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const logout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace("/login");
+  };
+
+  if (loading) {
+    return <main className="page-wrap">Loading review...</main>;
+  }
+
+  if (error) {
+    return <main className="page-wrap">{error}</main>;
+  }
+
+  return (
+    <div id="app">
+      <div className="header">
+        <div className="top-row">
+          <h2>{datasetTitle}</h2>
+          <div className="row-actions">
+            <button className="btn-outline" onClick={() => router.push(role === "admin" ? "/admin" : "/review/available")}>Back</button>
+            <button className="btn-outline" onClick={logout}>Logout</button>
+          </div>
+        </div>
+        <p>Review each triple and progress is saved automatically. {saveState}</p>
+      </div>
+
+      <div className="chapter-nav">
+        <div className="meta">Chapter {currentChapterIndex + 1}/{chapterOrder.length}: {currentChapterName || "-"}</div>
+        <div className="nav-actions">
+          <button
+            className="btn-outline"
+            disabled={currentChapterIndex <= 0}
+            onClick={() => setCurrentChapterIndex((prev) => Math.max(0, prev - 1))}
+          >
+            Previous chapter
+          </button>
+          <button
+            className="btn-primary"
+            disabled={currentChapterIndex >= chapterOrder.length - 1}
+            onClick={() => setCurrentChapterIndex((prev) => Math.min(chapterOrder.length - 1, prev + 1))}
+          >
+            Next chapter
+          </button>
+        </div>
+      </div>
+
+      <div className="tab-row" id="filter-tabs">
+        <button className={`tab ${currentFilter === "all" ? "active" : ""}`} onClick={() => setCurrentFilter("all")}>All</button>
+        <button className={`tab ${currentFilter === "unrated" ? "active" : ""}`} onClick={() => setCurrentFilter("unrated")}>Unrated</button>
+        <button className={`tab ${currentFilter === "flagged" ? "active" : ""}`} onClick={() => setCurrentFilter("flagged")}>Flagged</button>
+      </div>
+
+      <div className="stats-row">
+        <div className="stat"><div className="stat-label">Triples reviewed</div><div className="stat-val">{metrics.reviewed}/{metrics.total}</div></div>
+        <div className="stat"><div className="stat-label">Precision</div><div className="stat-val green">{Math.round(metrics.precision * 100)}%</div></div>
+        <div className="stat"><div className="stat-label">Recall</div><div className="stat-val amber">{Math.round(metrics.recall * 100)}%</div></div>
+        <div className="stat"><div className="stat-label">F1 score</div><div className="stat-val">{Math.round(metrics.f1 * 100)}%</div></div>
+      </div>
+
+      <div className="progress-bar"><div className="progress-fill" style={{ width: metrics.total > 0 ? `${Math.round((metrics.reviewed / metrics.total) * 100)}%` : "0%" }} /></div>
+
+      <div id="triples-container">
+        {visibleTriples.map((triple) => {
+          const rating = ratings[String(triple.id)];
+          return (
+            <div className={`triple-card ${rating ? "done" : ""}`} key={triple.id}>
+              <div className="triple-meta">
+                <span className="chapter-tag">{triple.chapter}</span>
+                <span className="subtopic-tag">{triple.subtopic}</span>
+                {!triple.glossary_validated ? (
+                  <span className="badge" style={{ background: "#FAEEDA", color: "#854F0B", fontSize: "10px", padding: "2px 7px", borderRadius: "99px", marginLeft: "4px" }}>
+                    unvalidated
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="triple-body">
+                <span className="node">{triple.subject}</span>
+                <span className="arrow">→</span>
+                <span className="rel-badge">{triple.relation}</span>
+                <span className="arrow">→</span>
+                <span className="node">{triple.target}</span>
+              </div>
+
+              <div className="triple-desc">{triple.description}</div>
+
+              <div className="rating-row">
+                <button className={`rating-btn ${rating === "correct" ? "selected-correct" : ""}`} onClick={() => rate(triple.id, "correct")}>✓ Correct</button>
+                <button className={`rating-btn ${rating === "partial" ? "selected-partial" : ""}`} onClick={() => rate(triple.id, "partial")}>~ Partially correct</button>
+                <button className={`rating-btn ${rating === "wrong" ? "selected-wrong" : ""}`} onClick={() => rate(triple.id, "wrong")}>✗ Wrong</button>
+                <button className={`rating-btn ${rating === "missing" ? "selected-missing" : ""}`} onClick={() => rate(triple.id, "missing")}>+ Missing context</button>
+              </div>
+
+              <textarea
+                className="comment-input"
+                placeholder="Optional comment..."
+                value={comments[String(triple.id)] || ""}
+                onChange={(event) =>
+                  setComments((prev) => ({
+                    ...prev,
+                    [triple.id]: event.target.value,
+                  }))
+                }
+              />
+            </div>
+          );
+        })}
+
+        {currentFilter === "all" ? (
+          <div className="triple-card" style={{ borderStyle: "dashed" }}>
+            <div style={{ fontSize: "13px", fontWeight: 500, marginBottom: "10px" }}>Add missing triple</div>
+            <div className="missing-form" style={{ display: "block" }}>
+              <input type="text" id="m-subject" placeholder="Subject (e.g. Enzim)" />
+              <input type="text" id="m-relation" placeholder="Relation (e.g. MEMBUTUHKAN)" />
+              <input type="text" id="m-target" placeholder="Target (e.g. Air)" />
+              <input type="text" id="m-desc" placeholder="Description (optional)" />
+              <button className="btn-primary" onClick={addMissing} style={{ fontSize: "12px", padding: "6px 14px" }}>
+                Add triple
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="actions-row">
+        <button className="btn-primary" onClick={exportResults}>Export results JSON</button>
+      </div>
+
+      <div className="results-panel" style={{ display: "block" }}>
+        <h3>Validation summary</h3>
+        <div className="metric-grid">
+          <div className="metric"><div className="metric-num green">{Math.round(metrics.precision * 100)}%</div><div className="metric-lbl">Precision</div></div>
+          <div className="metric"><div className="metric-num amber">{Math.round(metrics.recall * 100)}%</div><div className="metric-lbl">Recall</div></div>
+          <div className="metric"><div className="metric-num">{Math.round(metrics.f1 * 100)}%</div><div className="metric-lbl">F1 score</div></div>
+        </div>
+        <div className="error-breakdown">
+          <div className="section-label">Error breakdown</div>
+          <div className="error-row"><span>Correct</span><span className="badge" style={{ background: "#E1F5EE", color: "#0F6E56" }}>{metrics.correct}</span></div>
+          <div className="error-row"><span>Partially correct</span><span className="badge" style={{ background: "#FAEEDA", color: "#854F0B" }}>{metrics.partial}</span></div>
+          <div className="error-row"><span>Wrong</span><span className="badge" style={{ background: "#FAECE7", color: "#993C1D" }}>{metrics.wrong}</span></div>
+          <div className="error-row"><span>Missing (added by expert)</span><span className="badge" style={{ background: "#E6F1FB", color: "#185FA5" }}>{metrics.missing}</span></div>
+          <div className="error-row"><span>Unrated</span><span className="badge" style={{ background: "var(--color-background-secondary)", color: "var(--color-text-secondary)" }}>{metrics.unrated}</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
