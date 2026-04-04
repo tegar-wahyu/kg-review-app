@@ -113,6 +113,8 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
   }, [ratings, comments, missingTriples, readyToSave, courseId]);
 
   const currentChapterName = chapterOrder[currentChapterIndex] || chapterOrder[0] || "";
+  const atFirstChapter = currentChapterIndex <= 0;
+  const atLastChapter = currentChapterIndex >= chapterOrder.length - 1;
 
   const chapterTriples = useMemo(() => {
     return triples.filter((triple) => (triple.chapter || "Tanpa Kategori") === currentChapterName);
@@ -231,6 +233,14 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
     router.replace("/login");
   };
 
+  const goToPreviousChapter = () => {
+    setCurrentChapterIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  const goToNextChapter = () => {
+    setCurrentChapterIndex((prev) => Math.min(chapterOrder.length - 1, prev + 1));
+  };
+
   if (loading) {
     return <main className="page-wrap">Memuat review...</main>;
   }
@@ -286,19 +296,24 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
       ) : null}
 
       <div className="chapter-nav">
-        <div className="meta">Bab {currentChapterIndex + 1}/{chapterOrder.length}: {currentChapterName || "-"}</div>
+        <div className="chapter-info">
+          <div className="chapter-title-row">
+            <span className="chapter-index">Bab {currentChapterIndex + 1}/{chapterOrder.length}</span>
+            <span className="chapter-name">{currentChapterName || "-"}</span>
+          </div>
+        </div>
         <div className="nav-actions">
           <button
             className="btn-outline"
-            disabled={currentChapterIndex <= 0}
-            onClick={() => setCurrentChapterIndex((prev) => Math.max(0, prev - 1))}
+            disabled={atFirstChapter}
+            onClick={goToPreviousChapter}
           >
             Bab sebelumnya
           </button>
           <button
             className="btn-primary"
-            disabled={currentChapterIndex >= chapterOrder.length - 1}
-            onClick={() => setCurrentChapterIndex((prev) => Math.min(chapterOrder.length - 1, prev + 1))}
+            disabled={atLastChapter}
+            onClick={goToNextChapter}
           >
             Bab berikutnya
           </button>
@@ -404,6 +419,25 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
             </div>
           </div>
         ) : null}
+      </div>
+
+      <div className="chapter-nav chapter-nav-bottom">
+        <div className="nav-actions">
+          <button
+            className="btn-outline"
+            disabled={atFirstChapter}
+            onClick={goToPreviousChapter}
+          >
+            Bab sebelumnya
+          </button>
+          <button
+            className="btn-primary"
+            disabled={atLastChapter}
+            onClick={goToNextChapter}
+          >
+            Bab berikutnya
+          </button>
+        </div>
       </div>
 
       <div className="actions-row">
