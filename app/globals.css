@@ -148,6 +148,40 @@ textarea {
   margin-bottom: 1.15rem;
 }
 
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 0.5rem;
+  font-size: 13px;
+}
+
+.breadcrumb-link {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  opacity: 0.72;
+}
+
+.breadcrumb-link:hover {
+  text-decoration: underline;
+  opacity: 1;
+}
+
+.breadcrumb-sep {
+  color: var(--color-text-secondary);
+}
+
+.breadcrumb-current {
+  color: var(--color-text-secondary);
+}
+
 .header h2 {
   font-size: 18px;
   font-weight: 500;
@@ -541,6 +575,46 @@ textarea {
   cursor: pointer;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 50;
+}
+
+.modal-card {
+  width: min(440px, 100%);
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.16);
+  padding: 1.1rem 1.15rem;
+}
+
+.modal-card h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 0.45rem;
+}
+
+.modal-card p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 1rem;
+}
+
 .tab-row {
   display: flex;
   gap: 6px;
@@ -675,6 +749,10 @@ textarea {
   .course-card {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .breadcrumb {
+    font-size: 12px;
   }
 
   .chapter-nav,

@@ -46,6 +46,7 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
   const [saveState, setSaveState] = useState("Belum disimpan");
   const [readyToSave, setReadyToSave] = useState(false);
   const [role, setRole] = useState<"admin" | "expert">("expert");
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -241,15 +242,48 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
   return (
     <div id="app">
       <div className="header">
+        <nav className="breadcrumb" aria-label="Breadcrumb">
+          <button
+            className="breadcrumb-link"
+            onClick={() => router.push(role === "admin" ? "/admin" : "/review/available")}
+          >
+            {role === "admin" ? "Panel admin" : "Daftar mata pelajaran"}
+          </button>
+          <span className="breadcrumb-sep">/</span>
+          <span className="breadcrumb-current">{datasetTitle}</span>
+        </nav>
+
         <div className="top-row">
           <h2>{datasetTitle}</h2>
           <div className="row-actions">
-            <button className="btn-outline" onClick={() => router.push(role === "admin" ? "/admin" : "/review/available")}>Kembali</button>
-            <button className="btn-outline" onClick={logout}>Keluar</button>
+            <button className="btn-outline" onClick={() => setShowLogoutModal(true)}>Keluar</button>
           </div>
         </div>
         <p>Tinjau setiap triple, progres akan tersimpan otomatis. {saveState}</p>
       </div>
+
+      {showLogoutModal ? (
+        <div className="modal-backdrop" role="presentation" onClick={() => setShowLogoutModal(false)}>
+          <div
+            className="modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="logout-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 id="logout-title">Keluar dari sesi review?</h3>
+            <p>Progress yang sudah tersimpan akan tetap aman, tetapi kamu harus masuk lagi untuk melanjutkan.</p>
+            <div className="modal-actions">
+              <button className="btn-outline" onClick={() => setShowLogoutModal(false)}>
+                Batal
+              </button>
+              <button className="btn-primary" onClick={logout}>
+                Ya, keluar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="chapter-nav">
         <div className="meta">Bab {currentChapterIndex + 1}/{chapterOrder.length}: {currentChapterName || "-"}</div>
