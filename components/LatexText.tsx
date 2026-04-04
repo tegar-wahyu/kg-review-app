@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import renderMathInElement from "katex/contrib/auto-render";
 
 type LatexTextProps = {
@@ -114,8 +114,7 @@ function addHeuristicMathDelimiters(text: string) {
 }
 
 export default function LatexText({ as = "span", className, text }: LatexTextProps) {
-  const ref = useRef<HTMLDivElement | HTMLSpanElement | null>(null);
-  const Tag = as;
+  const ref = useRef<HTMLElement | null>(null);
   const preparedText = addHeuristicMathDelimiters(text);
 
   useEffect(() => {
@@ -133,9 +132,17 @@ export default function LatexText({ as = "span", className, text }: LatexTextPro
     });
   }, [preparedText]);
 
+  if (as === "div") {
+    return (
+      <div ref={ref as RefObject<HTMLDivElement>} className={className}>
+        {preparedText}
+      </div>
+    );
+  }
+
   return (
-    <Tag ref={ref} className={className}>
+    <span ref={ref as RefObject<HTMLSpanElement>} className={className}>
       {preparedText}
-    </Tag>
+    </span>
   );
 }
