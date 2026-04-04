@@ -23,6 +23,13 @@ type SessionPayload = {
   };
 };
 
+const ratingOptions: Array<{ value: ReviewRating; label: string; symbol: string; tone: string }> = [
+  { value: "correct", label: "Correct", symbol: "✓", tone: "correct" },
+  { value: "partial", label: "Partially correct", symbol: "~", tone: "partial" },
+  { value: "wrong", label: "Wrong", symbol: "✗", tone: "wrong" },
+  { value: "missing", label: "Missing context", symbol: "+", tone: "missing" },
+];
+
 export default function ReviewApp({ courseId }: { courseId: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -281,11 +288,16 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
       <div id="triples-container">
         {visibleTriples.map((triple) => {
           const rating = ratings[String(triple.id)];
+          const selectedRating = ratingOptions.find((option) => option.value === rating);
+
           return (
-            <div className={`triple-card ${rating ? "done" : ""}`} key={triple.id}>
+            <div className={`triple-card ${rating ? "done" : ""}`} data-rating={rating || "unrated"} key={triple.id}>
               <div className="triple-meta">
                 <span className="chapter-tag">{triple.chapter}</span>
                 <span className="subtopic-tag">{triple.subtopic}</span>
+                <span className={`answer-status ${rating ? `status-${rating}` : "status-unrated"}`}>
+                  {rating ? `Sudah dijawab: ${selectedRating?.label}` : "Belum dijawab"}
+                </span>
                 {!triple.glossary_validated ? (
                   <span className="badge" style={{ background: "#FAEEDA", color: "#854F0B", fontSize: "10px", padding: "2px 7px", borderRadius: "99px", marginLeft: "4px" }}>
                     unvalidated
@@ -304,10 +316,20 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
               <div className="triple-desc">{triple.description}</div>
 
               <div className="rating-row">
-                <button className={`rating-btn ${rating === "correct" ? "selected-correct" : ""}`} onClick={() => rate(triple.id, "correct")}>✓ Correct</button>
-                <button className={`rating-btn ${rating === "partial" ? "selected-partial" : ""}`} onClick={() => rate(triple.id, "partial")}>~ Partially correct</button>
-                <button className={`rating-btn ${rating === "wrong" ? "selected-wrong" : ""}`} onClick={() => rate(triple.id, "wrong")}>✗ Wrong</button>
-                <button className={`rating-btn ${rating === "missing" ? "selected-missing" : ""}`} onClick={() => rate(triple.id, "missing")}>+ Missing context</button>
+                {ratingOptions.map((option) => {
+                  const isSelected = rating === option.value;
+
+                  return (
+                    <button
+                      key={option.value}
+                      aria-pressed={isSelected}
+                      className={`rating-btn ${isSelected ? `selected-${option.tone}` : ""}`}
+                      onClick={() => rate(triple.id, option.value)}
+                    >
+                      {option.symbol} {option.label}
+                    </button>
+                  );
+                })}
               </div>
 
               <textarea
