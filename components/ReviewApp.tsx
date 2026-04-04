@@ -315,21 +315,29 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
 
               <div className="triple-desc">{triple.description}</div>
 
-              <div className="rating-row">
-                {ratingOptions.map((option) => {
-                  const isSelected = rating === option.value;
+              <div className="rating-group">
+                <div className="rating-label-row">
+                  <span className="rating-label">Penilaian</span>
+                  <span className="rating-hint">Pilih satu status yang paling sesuai</span>
+                </div>
 
-                  return (
-                    <button
-                      key={option.value}
-                      aria-pressed={isSelected}
-                      className={`rating-btn ${isSelected ? `selected-${option.tone}` : ""}`}
-                      onClick={() => rate(triple.id, option.value)}
-                    >
-                      {option.symbol} {option.label}
-                    </button>
-                  );
-                })}
+                <div className="rating-row" role="group" aria-label="Pilihan penilaian">
+                  {ratingOptions.map((option) => {
+                    const isSelected = rating === option.value;
+
+                    return (
+                      <button
+                        key={option.value}
+                        aria-pressed={isSelected}
+                        className={`rating-btn ${isSelected ? `selected-${option.tone}` : ""}`}
+                        onClick={() => rate(triple.id, option.value)}
+                      >
+                        <span className="rating-symbol">{option.symbol}</span>
+                        <span>{option.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <textarea
