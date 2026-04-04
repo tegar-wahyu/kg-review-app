@@ -24,7 +24,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (!res.ok) {
-      setError("Invalid credentials.");
+      setError("Username atau password tidak valid.");
       return;
     }
 
@@ -35,13 +35,13 @@ export default function LoginPage() {
   return (
     <main className="shell-center">
       <form className="auth-card" onSubmit={onSubmit}>
-        <h1>Knowledge graph review</h1>
-        <p>Sign in with your assigned admin or expert account.</p>
+        <h1>Tinjauan graf pengetahuan</h1>
+        <p>Masuk menggunakan akun admin atau expert yang sudah diberikan.</p>
 
-        <label>Username</label>
+        <label>Nama pengguna</label>
         <input value={username} onChange={(e) => setUsername(e.target.value)} required />
 
-        <label>Password</label>
+        <label>Kata sandi</label>
         <input
           type="password"
           value={password}
@@ -52,7 +52,7 @@ export default function LoginPage() {
         {error ? <div className="error-box">{error}</div> : null}
 
         <button type="submit" className="btn-primary" disabled={loading}>
-          {loading ? "Signing in..." : "Sign in"}
+          {loading ? "Sedang masuk..." : "Masuk"}
         </button>
       </form>
     </main>

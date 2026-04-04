@@ -21,5 +21,5 @@ export default function Home() {
     run();
   }, [router]);
 
-  return <div style={{ padding: "2rem", textAlign: "center" }}>Loading...</div>;
+  return <div style={{ padding: "2rem", textAlign: "center" }}>Memuat...</div>;
 }

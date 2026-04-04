@@ -17,13 +17,13 @@ function normalizeTitle(payload: CoursePayload, title?: string) {
     return payload.grade.trim();
   }
 
-  return "Untitled Course";
+  return "Mata Pelajaran Tanpa Judul";
 }
 
 export async function GET(request: NextRequest) {
   const user = await getUserFromRequest(request);
   if (!user || user.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Akses ditolak" }, { status: 403 });
   }
 
   const courses = await getCourses();
@@ -33,12 +33,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const user = await getUserFromRequest(request);
   if (!user || user.role !== "admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "Akses ditolak" }, { status: 403 });
   }
 
   const body = (await request.json()) as { title?: string; payload?: CoursePayload };
   if (!body?.payload) {
-    return NextResponse.json({ error: "payload is required" }, { status: 400 });
+    return NextResponse.json({ error: "payload wajib diisi" }, { status: 400 });
   }
 
   const title = normalizeTitle(body.payload, body.title);

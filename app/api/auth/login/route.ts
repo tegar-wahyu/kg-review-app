@@ -8,7 +8,7 @@ export async function POST(request: Request) {
 
   const user = validateCredentials(username, password);
   if (!user) {
-    return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    return NextResponse.json({ error: "Username atau password tidak valid" }, { status: 401 });
   }
 
   const token = await createSessionToken(user);

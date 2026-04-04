@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { extractTriples } from "@/lib/extract";
+import LatexText from "@/components/LatexText";
 import {
   CourseRecord,
   ExtractedTriple,
@@ -23,6 +24,13 @@ type SessionPayload = {
   };
 };
 
+const ratingOptions: Array<{ value: ReviewRating; label: string; symbol: string; tone: string }> = [
+  { value: "correct", label: "Benar", symbol: "✓", tone: "correct" },
+  { value: "partial", label: "Sebagian benar", symbol: "~", tone: "partial" },
+  { value: "wrong", label: "Salah", symbol: "✗", tone: "wrong" },
+  { value: "missing", label: "Kurang konteks", symbol: "+", tone: "missing" },
+];
+
 export default function ReviewApp({ courseId }: { courseId: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -34,10 +42,11 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
   const [currentFilter, setCurrentFilter] = useState<"all" | "unrated" | "flagged">("all");
   const [chapterOrder, setChapterOrder] = useState<string[]>([]);
   const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
-  const [datasetTitle, setDatasetTitle] = useState("Knowledge graph expert review");
-  const [saveState, setSaveState] = useState("Not saved");
+  const [datasetTitle, setDatasetTitle] = useState("Tinjauan ahli graf pengetahuan");
+  const [saveState, setSaveState] = useState("Belum disimpan");
   const [readyToSave, setReadyToSave] = useState(false);
   const [role, setRole] = useState<"admin" | "expert">("expert");
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -52,18 +61,18 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
 
       const res = await fetch(`/api/review/${courseId}`, { cache: "no-store" });
       if (!res.ok) {
-        setError("Unable to load review data.");
+        setError("Gagal memuat data review.");
         setLoading(false);
         return;
       }
 
       const data = (await res.json()) as ReviewPayload;
       const extracted = extractTriples(data.course.payload);
-      const chapters = Array.from(new Set(extracted.map((item) => item.chapter || "Uncategorized")));
+      const chapters = Array.from(new Set(extracted.map((item) => item.chapter || "Tanpa Kategori")));
 
-      setDatasetTitle(data.course.title || "Knowledge graph expert review");
+      setDatasetTitle(data.course.title || "Tinjauan ahli graf pengetahuan");
       setTriples(extracted);
-      setChapterOrder(chapters.length ? chapters : ["Uncategorized"]);
+      setChapterOrder(chapters.length ? chapters : ["Tanpa Kategori"]);
       setCurrentChapterIndex(0);
 
       if (data.progress) {
@@ -74,7 +83,7 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
 
       setLoading(false);
       setReadyToSave(true);
-      setSaveState("Loaded");
+      setSaveState("Dimuat");
     };
 
     load();
@@ -84,7 +93,7 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
     if (!readyToSave) return;
 
     const timer = setTimeout(async () => {
-      setSaveState("Saving...");
+      setSaveState("Menyimpan...");
 
       const res = await fetch(`/api/review/${courseId}`, {
         method: "POST",
@@ -93,20 +102,22 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
       });
 
       if (!res.ok) {
-        setSaveState("Save failed");
+        setSaveState("Gagal menyimpan");
         return;
       }
 
-      setSaveState(`Saved ${new Date().toLocaleTimeString()}`);
+      setSaveState(`Tersimpan ${new Date().toLocaleTimeString()}`);
     }, 700);
 
     return () => clearTimeout(timer);
   }, [ratings, comments, missingTriples, readyToSave, courseId]);
 
   const currentChapterName = chapterOrder[currentChapterIndex] || chapterOrder[0] || "";
+  const atFirstChapter = currentChapterIndex <= 0;
+  const atLastChapter = currentChapterIndex >= chapterOrder.length - 1;
 
   const chapterTriples = useMemo(() => {
-    return triples.filter((triple) => (triple.chapter || "Uncategorized") === currentChapterName);
+    return triples.filter((triple) => (triple.chapter || "Tanpa Kategori") === currentChapterName);
   }, [triples, currentChapterName]);
 
   const visibleTriples = useMemo(() => {
@@ -172,7 +183,7 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
     const description = descInput?.value.trim() || "";
 
     if (!subject || !relation || !target) {
-      alert("Subject, relation, and target are required.");
+      alert("Subjek, relasi, dan target wajib diisi.");
       return;
     }
 
@@ -222,8 +233,16 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
     router.replace("/login");
   };
 
+  const goToPreviousChapter = () => {
+    setCurrentChapterIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  const goToNextChapter = () => {
+    setCurrentChapterIndex((prev) => Math.min(chapterOrder.length - 1, prev + 1));
+  };
+
   if (loading) {
-    return <main className="page-wrap">Loading review...</main>;
+    return <main className="page-wrap">Memuat review...</main>;
   }
 
   if (error) {
@@ -233,47 +252,85 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
   return (
     <div id="app">
       <div className="header">
+        <nav className="breadcrumb" aria-label="Breadcrumb">
+          <button
+            className="breadcrumb-link"
+            onClick={() => router.push(role === "admin" ? "/admin" : "/review/available")}
+          >
+            {role === "admin" ? "Panel admin" : "Daftar mata pelajaran"}
+          </button>
+          <span className="breadcrumb-sep">/</span>
+          <span className="breadcrumb-current">{datasetTitle}</span>
+        </nav>
+
         <div className="top-row">
           <h2>{datasetTitle}</h2>
           <div className="row-actions">
-            <button className="btn-outline" onClick={() => router.push(role === "admin" ? "/admin" : "/review/available")}>Back</button>
-            <button className="btn-outline" onClick={logout}>Logout</button>
+            <button className="btn-outline" onClick={() => setShowLogoutModal(true)}>Keluar</button>
           </div>
         </div>
-        <p>Review each triple and progress is saved automatically. {saveState}</p>
+        <p>Tinjau setiap triple, progres akan tersimpan otomatis. {saveState}</p>
       </div>
 
+      {showLogoutModal ? (
+        <div className="modal-backdrop" role="presentation" onClick={() => setShowLogoutModal(false)}>
+          <div
+            className="modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="logout-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 id="logout-title">Keluar dari sesi review?</h3>
+            <p>Progress yang sudah tersimpan akan tetap aman, tetapi kamu harus masuk lagi untuk melanjutkan.</p>
+            <div className="modal-actions">
+              <button className="btn-outline" onClick={() => setShowLogoutModal(false)}>
+                Batal
+              </button>
+              <button className="btn-primary" onClick={logout}>
+                Ya, keluar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="chapter-nav">
-        <div className="meta">Chapter {currentChapterIndex + 1}/{chapterOrder.length}: {currentChapterName || "-"}</div>
+        <div className="chapter-info">
+          <div className="chapter-title-row">
+            <span className="chapter-index">Bab {currentChapterIndex + 1}/{chapterOrder.length}</span>
+            <span className="chapter-name">{currentChapterName || "-"}</span>
+          </div>
+        </div>
         <div className="nav-actions">
           <button
             className="btn-outline"
-            disabled={currentChapterIndex <= 0}
-            onClick={() => setCurrentChapterIndex((prev) => Math.max(0, prev - 1))}
+            disabled={atFirstChapter}
+            onClick={goToPreviousChapter}
           >
-            Previous chapter
+            Bab sebelumnya
           </button>
           <button
             className="btn-primary"
-            disabled={currentChapterIndex >= chapterOrder.length - 1}
-            onClick={() => setCurrentChapterIndex((prev) => Math.min(chapterOrder.length - 1, prev + 1))}
+            disabled={atLastChapter}
+            onClick={goToNextChapter}
           >
-            Next chapter
+            Bab berikutnya
           </button>
         </div>
       </div>
 
       <div className="tab-row" id="filter-tabs">
-        <button className={`tab ${currentFilter === "all" ? "active" : ""}`} onClick={() => setCurrentFilter("all")}>All</button>
-        <button className={`tab ${currentFilter === "unrated" ? "active" : ""}`} onClick={() => setCurrentFilter("unrated")}>Unrated</button>
-        <button className={`tab ${currentFilter === "flagged" ? "active" : ""}`} onClick={() => setCurrentFilter("flagged")}>Flagged</button>
+        <button className={`tab ${currentFilter === "all" ? "active" : ""}`} onClick={() => setCurrentFilter("all")}>Semua</button>
+        <button className={`tab ${currentFilter === "unrated" ? "active" : ""}`} onClick={() => setCurrentFilter("unrated")}>Belum dinilai</button>
+        <button className={`tab ${currentFilter === "flagged" ? "active" : ""}`} onClick={() => setCurrentFilter("flagged")}>Perlu dicek</button>
       </div>
 
       <div className="stats-row">
-        <div className="stat"><div className="stat-label">Triples reviewed</div><div className="stat-val">{metrics.reviewed}/{metrics.total}</div></div>
-        <div className="stat"><div className="stat-label">Precision</div><div className="stat-val green">{Math.round(metrics.precision * 100)}%</div></div>
+        <div className="stat"><div className="stat-label">Triple ditinjau</div><div className="stat-val">{metrics.reviewed}/{metrics.total}</div></div>
+        <div className="stat"><div className="stat-label">Presisi</div><div className="stat-val green">{Math.round(metrics.precision * 100)}%</div></div>
         <div className="stat"><div className="stat-label">Recall</div><div className="stat-val amber">{Math.round(metrics.recall * 100)}%</div></div>
-        <div className="stat"><div className="stat-label">F1 score</div><div className="stat-val">{Math.round(metrics.f1 * 100)}%</div></div>
+        <div className="stat"><div className="stat-label">Skor F1</div><div className="stat-val">{Math.round(metrics.f1 * 100)}%</div></div>
       </div>
 
       <div className="progress-bar"><div className="progress-fill" style={{ width: metrics.total > 0 ? `${Math.round((metrics.reviewed / metrics.total) * 100)}%` : "0%" }} /></div>
@@ -281,38 +338,61 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
       <div id="triples-container">
         {visibleTriples.map((triple) => {
           const rating = ratings[String(triple.id)];
+          const selectedRating = ratingOptions.find((option) => option.value === rating);
+
           return (
-            <div className={`triple-card ${rating ? "done" : ""}`} key={triple.id}>
+            <div className={`triple-card ${rating ? "done" : ""}`} data-rating={rating || "unrated"} key={triple.id}>
               <div className="triple-meta">
                 <span className="chapter-tag">{triple.chapter}</span>
                 <span className="subtopic-tag">{triple.subtopic}</span>
+                <span className={`answer-status ${rating ? `status-${rating}` : "status-unrated"}`}>
+                  {rating ? `Sudah dijawab: ${selectedRating?.label}` : "Belum dijawab"}
+                </span>
                 {!triple.glossary_validated ? (
                   <span className="badge" style={{ background: "#FAEEDA", color: "#854F0B", fontSize: "10px", padding: "2px 7px", borderRadius: "99px", marginLeft: "4px" }}>
-                    unvalidated
+                    belum divalidasi
                   </span>
                 ) : null}
               </div>
 
               <div className="triple-body">
-                <span className="node">{triple.subject}</span>
+                <LatexText as="span" className="node" text={triple.subject} />
                 <span className="arrow">→</span>
-                <span className="rel-badge">{triple.relation}</span>
+                <LatexText as="span" className="rel-badge" text={triple.relation} />
                 <span className="arrow">→</span>
-                <span className="node">{triple.target}</span>
+                <LatexText as="span" className="node" text={triple.target} />
               </div>
 
-              <div className="triple-desc">{triple.description}</div>
+              <LatexText as="div" className="triple-desc" text={triple.description} />
 
-              <div className="rating-row">
-                <button className={`rating-btn ${rating === "correct" ? "selected-correct" : ""}`} onClick={() => rate(triple.id, "correct")}>✓ Correct</button>
-                <button className={`rating-btn ${rating === "partial" ? "selected-partial" : ""}`} onClick={() => rate(triple.id, "partial")}>~ Partially correct</button>
-                <button className={`rating-btn ${rating === "wrong" ? "selected-wrong" : ""}`} onClick={() => rate(triple.id, "wrong")}>✗ Wrong</button>
-                <button className={`rating-btn ${rating === "missing" ? "selected-missing" : ""}`} onClick={() => rate(triple.id, "missing")}>+ Missing context</button>
+              <div className="rating-group">
+                <div className="rating-label-row">
+                  <span className="rating-label">Penilaian</span>
+                  <span className="rating-hint">Pilih satu status yang paling sesuai</span>
+                </div>
+
+                <div className="rating-row" role="group" aria-label="Pilihan penilaian">
+                  {ratingOptions.map((option) => {
+                    const isSelected = rating === option.value;
+
+                    return (
+                      <button
+                        key={option.value}
+                        aria-pressed={isSelected}
+                        className={`rating-btn ${isSelected ? `selected-${option.tone}` : ""}`}
+                        onClick={() => rate(triple.id, option.value)}
+                      >
+                        <span className="rating-symbol">{option.symbol}</span>
+                        <span>{option.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <textarea
                 className="comment-input"
-                placeholder="Optional comment..."
+                placeholder="Komentar opsional..."
                 value={comments[String(triple.id)] || ""}
                 onChange={(event) =>
                   setComments((prev) => ({
@@ -327,38 +407,76 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
 
         {currentFilter === "all" ? (
           <div className="triple-card" style={{ borderStyle: "dashed" }}>
-            <div style={{ fontSize: "13px", fontWeight: 500, marginBottom: "10px" }}>Add missing triple</div>
-            <div className="missing-form" style={{ display: "block" }}>
-              <input type="text" id="m-subject" placeholder="Subject (e.g. Enzim)" />
-              <input type="text" id="m-relation" placeholder="Relation (e.g. MEMBUTUHKAN)" />
-              <input type="text" id="m-target" placeholder="Target (e.g. Air)" />
-              <input type="text" id="m-desc" placeholder="Description (optional)" />
-              <button className="btn-primary" onClick={addMissing} style={{ fontSize: "12px", padding: "6px 14px" }}>
-                Add triple
-              </button>
+            <div className="missing-title">Tambah triple yang belum ada</div>
+            <div className="missing-form">
+              <div className="missing-graph">
+                <div className="missing-field missing-subject">
+                  <label htmlFor="m-subject">Subjek</label>
+                  <input type="text" id="m-subject" placeholder="mis. Enzim" />
+                </div>
+                <span className="missing-arrow" aria-hidden="true">→</span>
+                <div className="missing-field missing-relation">
+                  <label htmlFor="m-relation">Relasi</label>
+                  <input type="text" id="m-relation" placeholder="mis. MEMBUTUHKAN" />
+                </div>
+                <span className="missing-arrow" aria-hidden="true">→</span>
+                <div className="missing-field missing-target">
+                  <label htmlFor="m-target">Target</label>
+                  <input type="text" id="m-target" placeholder="mis. Air" />
+                </div>
+              </div>
+
+              <div className="missing-note-row">
+                <div className="missing-field missing-desc">
+                  <label htmlFor="m-desc">Deskripsi tambahan</label>
+                  <input type="text" id="m-desc" placeholder="Opsional, jelaskan relasi ini bila perlu" />
+                </div>
+                <button className="btn-primary missing-submit" onClick={addMissing}>
+                  Tambah triple
+                </button>
+              </div>
             </div>
           </div>
         ) : null}
       </div>
 
+      <div className="chapter-nav chapter-nav-bottom">
+        <div className="nav-actions">
+          <button
+            className="btn-outline"
+            disabled={atFirstChapter}
+            onClick={goToPreviousChapter}
+          >
+            Bab sebelumnya
+          </button>
+          <button
+            className="btn-primary"
+            disabled={atLastChapter}
+            onClick={goToNextChapter}
+          >
+            Bab berikutnya
+          </button>
+        </div>
+      </div>
+
       <div className="actions-row">
-        <button className="btn-primary" onClick={exportResults}>Export results JSON</button>
+        <button className="btn-primary" onClick={exportResults}>Ekspor hasil JSON</button>
       </div>
 
       <div className="results-panel" style={{ display: "block" }}>
-        <h3>Validation summary</h3>
+        <h3>Ringkasan validasi</h3>
         <div className="metric-grid">
-          <div className="metric"><div className="metric-num green">{Math.round(metrics.precision * 100)}%</div><div className="metric-lbl">Precision</div></div>
+          <div className="metric"><div className="metric-num green">{Math.round(metrics.precision * 100)}%</div><div className="metric-lbl">Presisi</div></div>
           <div className="metric"><div className="metric-num amber">{Math.round(metrics.recall * 100)}%</div><div className="metric-lbl">Recall</div></div>
-          <div className="metric"><div className="metric-num">{Math.round(metrics.f1 * 100)}%</div><div className="metric-lbl">F1 score</div></div>
+          <div className="metric"><div className="metric-num">{Math.round(metrics.f1 * 100)}%</div><div className="metric-lbl">Skor F1</div></div>
         </div>
         <div className="error-breakdown">
-          <div className="section-label">Error breakdown</div>
-          <div className="error-row"><span>Correct</span><span className="badge" style={{ background: "#E1F5EE", color: "#0F6E56" }}>{metrics.correct}</span></div>
-          <div className="error-row"><span>Partially correct</span><span className="badge" style={{ background: "#FAEEDA", color: "#854F0B" }}>{metrics.partial}</span></div>
-          <div className="error-row"><span>Wrong</span><span className="badge" style={{ background: "#FAECE7", color: "#993C1D" }}>{metrics.wrong}</span></div>
-          <div className="error-row"><span>Missing (added by expert)</span><span className="badge" style={{ background: "#E6F1FB", color: "#185FA5" }}>{metrics.missing}</span></div>
-          <div className="error-row"><span>Unrated</span><span className="badge" style={{ background: "var(--color-background-secondary)", color: "var(--color-text-secondary)" }}>{metrics.unrated}</span></div>
+          <div className="section-label">Rincian hasil</div>
+          <div className="error-row"><span>Benar</span><span className="badge" style={{ background: "#E1F5EE", color: "#0F6E56" }}>{metrics.correct}</span></div>
+          <div className="error-row"><span>Sebagian benar</span><span className="badge" style={{ background: "#FAEEDA", color: "#854F0B" }}>{metrics.partial}</span></div>
+          <div className="error-row"><span>Salah</span><span className="badge" style={{ background: "#FAECE7", color: "#993C1D" }}>{metrics.wrong}</span></div>
+          <div className="error-row"><span>Kurang konteks (ditambahkan expert)</span><span className="badge" style={{ background: "#E6F1FB", color: "#185FA5" }}>{metrics.missing}</span></div>
+          <div className="error-row"><span>Belum dinilai</span><span className="badge" style={{ background: "var(--color-background-secondary)", color: "var(--color-text-secondary)" }}>{metrics.unrated}</span></div>
         </div>
       </div>
     </div>

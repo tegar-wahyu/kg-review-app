@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "katex/dist/katex.min.css";
 
 export const metadata: Metadata = {
-  title: "Knowledge Graph Expert Review",
-  description: "Expert review workflow with admin course publishing.",
+  title: "Tinjauan Graf Pengetahuan",
+  description: "Alur review oleh expert dengan pengelolaan mata pelajaran oleh admin.",
 };
 
 export default function RootLayout({
@@ -11,5 +12,5 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <html lang="en"><body>{children}</body></html>;
+  return <html lang="id"><body>{children}</body></html>;
 }
