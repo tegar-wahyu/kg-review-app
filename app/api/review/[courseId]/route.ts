@@ -9,18 +9,18 @@ export async function GET(
 ) {
   const user = await getUserFromRequest(request);
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Tidak diizinkan" }, { status: 401 });
   }
 
   const { courseId } = await context.params;
   const course = await getCourseById(courseId);
 
   if (!course) {
-    return NextResponse.json({ error: "Course not found" }, { status: 404 });
+    return NextResponse.json({ error: "Mata pelajaran tidak ditemukan" }, { status: 404 });
   }
 
   if (user.role !== "admin" && !course.published) {
-    return NextResponse.json({ error: "Course not published" }, { status: 403 });
+    return NextResponse.json({ error: "Mata pelajaran belum dipublikasikan" }, { status: 403 });
   }
 
   const progress = await getProgress(user.username, courseId);
@@ -33,18 +33,18 @@ export async function POST(
 ) {
   const user = await getUserFromRequest(request);
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Tidak diizinkan" }, { status: 401 });
   }
 
   const { courseId } = await context.params;
   const course = await getCourseById(courseId);
 
   if (!course) {
-    return NextResponse.json({ error: "Course not found" }, { status: 404 });
+    return NextResponse.json({ error: "Mata pelajaran tidak ditemukan" }, { status: 404 });
   }
 
   if (user.role !== "admin" && !course.published) {
-    return NextResponse.json({ error: "Course not published" }, { status: 403 });
+    return NextResponse.json({ error: "Mata pelajaran belum dipublikasikan" }, { status: 403 });
   }
 
   const body = (await request.json()) as Partial<ReviewProgress>;

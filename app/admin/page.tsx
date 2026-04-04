@@ -28,7 +28,7 @@ export default function AdminPage() {
 
     const res = await fetch("/api/admin/courses", { cache: "no-store" });
     if (!res.ok) {
-      setError("Failed to load courses.");
+      setError("Gagal memuat mata pelajaran.");
       setLoading(false);
       return;
     }
@@ -46,7 +46,7 @@ export default function AdminPage() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setStatus("Uploading...");
+    setStatus("Mengunggah...");
     setError("");
 
     try {
@@ -60,13 +60,13 @@ export default function AdminPage() {
       });
 
       if (!res.ok) {
-        throw new Error("Upload failed");
+        throw new Error("Unggah gagal");
       }
 
-      setStatus("Upload complete.");
+      setStatus("Unggah selesai.");
       await load();
     } catch {
-      setError("Invalid JSON or upload failed.");
+      setError("JSON tidak valid atau unggahan gagal.");
       setStatus("");
     } finally {
       event.target.value = "";
@@ -74,7 +74,7 @@ export default function AdminPage() {
   };
 
   const togglePublish = async (course: CourseRecord) => {
-    setStatus("Saving visibility...");
+    setStatus("Menyimpan visibilitas...");
 
     const res = await fetch(`/api/admin/courses/${course.id}`, {
       method: "PATCH",
@@ -83,12 +83,12 @@ export default function AdminPage() {
     });
 
     if (!res.ok) {
-      setError("Failed to update course visibility.");
+      setError("Gagal memperbarui visibilitas mata pelajaran.");
       setStatus("");
       return;
     }
 
-    setStatus("Visibility updated.");
+    setStatus("Visibilitas berhasil diperbarui.");
     await load();
   };
 
@@ -98,20 +98,20 @@ export default function AdminPage() {
   };
 
   if (loading) {
-    return <main className="page-wrap">Loading...</main>;
+    return <main className="page-wrap">Memuat...</main>;
   }
 
   return (
     <main className="page-wrap">
       <div className="top-row">
-        <h1>Admin panel</h1>
-        <button className="btn-outline" onClick={logout}>Logout</button>
+        <h1>Panel admin</h1>
+        <button className="btn-outline" onClick={logout}>Keluar</button>
       </div>
 
-      <p className="muted">Upload course JSON and set which course is reviewable by experts.</p>
+      <p className="muted">Unggah JSON mata pelajaran dan atur mata pelajaran mana yang bisa direview oleh expert.</p>
 
       <label className="file-upload">
-        Upload course JSON
+        Unggah JSON mata pelajaran
         <input type="file" accept=".json" onChange={onFile} />
       </label>
 
@@ -123,14 +123,14 @@ export default function AdminPage() {
           <div className="course-card" key={course.id}>
             <div>
               <h3>{course.title}</h3>
-              <p className="muted small">Uploaded: {new Date(course.uploadedAt).toLocaleString()}</p>
+              <p className="muted small">Diunggah: {new Date(course.uploadedAt).toLocaleString("id-ID")}</p>
             </div>
             <div className="row-actions">
               <button className="btn-outline" onClick={() => router.push(`/review/${course.id}`)}>
-                Open
+                Buka
               </button>
               <button className="btn-primary" onClick={() => togglePublish(course)}>
-                {course.published ? "Unpublish" : "Publish"}
+                {course.published ? "Batalkan publikasi" : "Publikasikan"}
               </button>
             </div>
           </div>

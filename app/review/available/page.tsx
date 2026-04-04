@@ -37,30 +37,30 @@ export default function AvailableCoursesPage() {
   };
 
   if (loading) {
-    return <main className="page-wrap">Loading...</main>;
+    return <main className="page-wrap">Memuat...</main>;
   }
 
   return (
     <main className="page-wrap">
       <div className="top-row">
-        <h1>Available courses</h1>
-        <button className="btn-outline" onClick={logout}>Logout</button>
+        <h1>Mata pelajaran tersedia</h1>
+        <button className="btn-outline" onClick={logout}>Keluar</button>
       </div>
-      <p className="muted">Select a published course to continue your review.</p>
+      <p className="muted">Pilih mata pelajaran yang sudah dipublikasikan untuk melanjutkan review.</p>
 
       <div className="course-list">
         {courses.map((course) => (
           <div className="course-card" key={course.id}>
             <div>
               <h3>{course.title}</h3>
-              <p className="muted small">{course.published ? "Published" : "Draft"}</p>
+              <p className="muted small">{course.published ? "Dipublikasikan" : "Draf"}</p>
             </div>
             <button className="btn-primary" onClick={() => router.push(`/review/${course.id}`)}>
-              Start review
+              Mulai review
             </button>
           </div>
         ))}
-        {courses.length === 0 ? <p className="muted">No reviewable course yet. Ask admin to publish one.</p> : null}
+        {courses.length === 0 ? <p className="muted">Belum ada mata pelajaran yang bisa direview. Minta admin untuk mempublikasikannya.</p> : null}
       </div>
     </main>
   );

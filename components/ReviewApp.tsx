@@ -24,10 +24,10 @@ type SessionPayload = {
 };
 
 const ratingOptions: Array<{ value: ReviewRating; label: string; symbol: string; tone: string }> = [
-  { value: "correct", label: "Correct", symbol: "✓", tone: "correct" },
-  { value: "partial", label: "Partially correct", symbol: "~", tone: "partial" },
-  { value: "wrong", label: "Wrong", symbol: "✗", tone: "wrong" },
-  { value: "missing", label: "Missing context", symbol: "+", tone: "missing" },
+  { value: "correct", label: "Benar", symbol: "✓", tone: "correct" },
+  { value: "partial", label: "Sebagian benar", symbol: "~", tone: "partial" },
+  { value: "wrong", label: "Salah", symbol: "✗", tone: "wrong" },
+  { value: "missing", label: "Kurang konteks", symbol: "+", tone: "missing" },
 ];
 
 export default function ReviewApp({ courseId }: { courseId: string }) {
@@ -41,8 +41,8 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
   const [currentFilter, setCurrentFilter] = useState<"all" | "unrated" | "flagged">("all");
   const [chapterOrder, setChapterOrder] = useState<string[]>([]);
   const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
-  const [datasetTitle, setDatasetTitle] = useState("Knowledge graph expert review");
-  const [saveState, setSaveState] = useState("Not saved");
+  const [datasetTitle, setDatasetTitle] = useState("Tinjauan ahli graf pengetahuan");
+  const [saveState, setSaveState] = useState("Belum disimpan");
   const [readyToSave, setReadyToSave] = useState(false);
   const [role, setRole] = useState<"admin" | "expert">("expert");
 
@@ -59,18 +59,18 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
 
       const res = await fetch(`/api/review/${courseId}`, { cache: "no-store" });
       if (!res.ok) {
-        setError("Unable to load review data.");
+        setError("Gagal memuat data review.");
         setLoading(false);
         return;
       }
 
       const data = (await res.json()) as ReviewPayload;
       const extracted = extractTriples(data.course.payload);
-      const chapters = Array.from(new Set(extracted.map((item) => item.chapter || "Uncategorized")));
+      const chapters = Array.from(new Set(extracted.map((item) => item.chapter || "Tanpa Kategori")));
 
-      setDatasetTitle(data.course.title || "Knowledge graph expert review");
+      setDatasetTitle(data.course.title || "Tinjauan ahli graf pengetahuan");
       setTriples(extracted);
-      setChapterOrder(chapters.length ? chapters : ["Uncategorized"]);
+      setChapterOrder(chapters.length ? chapters : ["Tanpa Kategori"]);
       setCurrentChapterIndex(0);
 
       if (data.progress) {
@@ -81,7 +81,7 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
 
       setLoading(false);
       setReadyToSave(true);
-      setSaveState("Loaded");
+      setSaveState("Dimuat");
     };
 
     load();
@@ -91,7 +91,7 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
     if (!readyToSave) return;
 
     const timer = setTimeout(async () => {
-      setSaveState("Saving...");
+      setSaveState("Menyimpan...");
 
       const res = await fetch(`/api/review/${courseId}`, {
         method: "POST",
@@ -100,11 +100,11 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
       });
 
       if (!res.ok) {
-        setSaveState("Save failed");
+        setSaveState("Gagal menyimpan");
         return;
       }
 
-      setSaveState(`Saved ${new Date().toLocaleTimeString()}`);
+      setSaveState(`Tersimpan ${new Date().toLocaleTimeString()}`);
     }, 700);
 
     return () => clearTimeout(timer);
@@ -113,7 +113,7 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
   const currentChapterName = chapterOrder[currentChapterIndex] || chapterOrder[0] || "";
 
   const chapterTriples = useMemo(() => {
-    return triples.filter((triple) => (triple.chapter || "Uncategorized") === currentChapterName);
+    return triples.filter((triple) => (triple.chapter || "Tanpa Kategori") === currentChapterName);
   }, [triples, currentChapterName]);
 
   const visibleTriples = useMemo(() => {
@@ -179,7 +179,7 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
     const description = descInput?.value.trim() || "";
 
     if (!subject || !relation || !target) {
-      alert("Subject, relation, and target are required.");
+      alert("Subjek, relasi, dan target wajib diisi.");
       return;
     }
 
@@ -230,7 +230,7 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
   };
 
   if (loading) {
-    return <main className="page-wrap">Loading review...</main>;
+    return <main className="page-wrap">Memuat review...</main>;
   }
 
   if (error) {
@@ -243,44 +243,44 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
         <div className="top-row">
           <h2>{datasetTitle}</h2>
           <div className="row-actions">
-            <button className="btn-outline" onClick={() => router.push(role === "admin" ? "/admin" : "/review/available")}>Back</button>
-            <button className="btn-outline" onClick={logout}>Logout</button>
+            <button className="btn-outline" onClick={() => router.push(role === "admin" ? "/admin" : "/review/available")}>Kembali</button>
+            <button className="btn-outline" onClick={logout}>Keluar</button>
           </div>
         </div>
-        <p>Review each triple and progress is saved automatically. {saveState}</p>
+        <p>Tinjau setiap triple, progres akan tersimpan otomatis. {saveState}</p>
       </div>
 
       <div className="chapter-nav">
-        <div className="meta">Chapter {currentChapterIndex + 1}/{chapterOrder.length}: {currentChapterName || "-"}</div>
+        <div className="meta">Bab {currentChapterIndex + 1}/{chapterOrder.length}: {currentChapterName || "-"}</div>
         <div className="nav-actions">
           <button
             className="btn-outline"
             disabled={currentChapterIndex <= 0}
             onClick={() => setCurrentChapterIndex((prev) => Math.max(0, prev - 1))}
           >
-            Previous chapter
+            Bab sebelumnya
           </button>
           <button
             className="btn-primary"
             disabled={currentChapterIndex >= chapterOrder.length - 1}
             onClick={() => setCurrentChapterIndex((prev) => Math.min(chapterOrder.length - 1, prev + 1))}
           >
-            Next chapter
+            Bab berikutnya
           </button>
         </div>
       </div>
 
       <div className="tab-row" id="filter-tabs">
-        <button className={`tab ${currentFilter === "all" ? "active" : ""}`} onClick={() => setCurrentFilter("all")}>All</button>
-        <button className={`tab ${currentFilter === "unrated" ? "active" : ""}`} onClick={() => setCurrentFilter("unrated")}>Unrated</button>
-        <button className={`tab ${currentFilter === "flagged" ? "active" : ""}`} onClick={() => setCurrentFilter("flagged")}>Flagged</button>
+        <button className={`tab ${currentFilter === "all" ? "active" : ""}`} onClick={() => setCurrentFilter("all")}>Semua</button>
+        <button className={`tab ${currentFilter === "unrated" ? "active" : ""}`} onClick={() => setCurrentFilter("unrated")}>Belum dinilai</button>
+        <button className={`tab ${currentFilter === "flagged" ? "active" : ""}`} onClick={() => setCurrentFilter("flagged")}>Perlu dicek</button>
       </div>
 
       <div className="stats-row">
-        <div className="stat"><div className="stat-label">Triples reviewed</div><div className="stat-val">{metrics.reviewed}/{metrics.total}</div></div>
-        <div className="stat"><div className="stat-label">Precision</div><div className="stat-val green">{Math.round(metrics.precision * 100)}%</div></div>
+        <div className="stat"><div className="stat-label">Triple ditinjau</div><div className="stat-val">{metrics.reviewed}/{metrics.total}</div></div>
+        <div className="stat"><div className="stat-label">Presisi</div><div className="stat-val green">{Math.round(metrics.precision * 100)}%</div></div>
         <div className="stat"><div className="stat-label">Recall</div><div className="stat-val amber">{Math.round(metrics.recall * 100)}%</div></div>
-        <div className="stat"><div className="stat-label">F1 score</div><div className="stat-val">{Math.round(metrics.f1 * 100)}%</div></div>
+        <div className="stat"><div className="stat-label">Skor F1</div><div className="stat-val">{Math.round(metrics.f1 * 100)}%</div></div>
       </div>
 
       <div className="progress-bar"><div className="progress-fill" style={{ width: metrics.total > 0 ? `${Math.round((metrics.reviewed / metrics.total) * 100)}%` : "0%" }} /></div>
@@ -300,7 +300,7 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
                 </span>
                 {!triple.glossary_validated ? (
                   <span className="badge" style={{ background: "#FAEEDA", color: "#854F0B", fontSize: "10px", padding: "2px 7px", borderRadius: "99px", marginLeft: "4px" }}>
-                    unvalidated
+                    belum divalidasi
                   </span>
                 ) : null}
               </div>
@@ -334,7 +334,7 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
 
               <textarea
                 className="comment-input"
-                placeholder="Optional comment..."
+                placeholder="Komentar opsional..."
                 value={comments[String(triple.id)] || ""}
                 onChange={(event) =>
                   setComments((prev) => ({
@@ -349,14 +349,14 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
 
         {currentFilter === "all" ? (
           <div className="triple-card" style={{ borderStyle: "dashed" }}>
-            <div style={{ fontSize: "13px", fontWeight: 500, marginBottom: "10px" }}>Add missing triple</div>
+            <div style={{ fontSize: "13px", fontWeight: 500, marginBottom: "10px" }}>Tambah triple yang belum ada</div>
             <div className="missing-form" style={{ display: "block" }}>
-              <input type="text" id="m-subject" placeholder="Subject (e.g. Enzim)" />
-              <input type="text" id="m-relation" placeholder="Relation (e.g. MEMBUTUHKAN)" />
-              <input type="text" id="m-target" placeholder="Target (e.g. Air)" />
-              <input type="text" id="m-desc" placeholder="Description (optional)" />
+              <input type="text" id="m-subject" placeholder="Subjek (mis. Enzim)" />
+              <input type="text" id="m-relation" placeholder="Relasi (mis. MEMBUTUHKAN)" />
+              <input type="text" id="m-target" placeholder="Target (mis. Air)" />
+              <input type="text" id="m-desc" placeholder="Deskripsi (opsional)" />
               <button className="btn-primary" onClick={addMissing} style={{ fontSize: "12px", padding: "6px 14px" }}>
-                Add triple
+                Tambah triple
               </button>
             </div>
           </div>
@@ -364,23 +364,23 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
       </div>
 
       <div className="actions-row">
-        <button className="btn-primary" onClick={exportResults}>Export results JSON</button>
+        <button className="btn-primary" onClick={exportResults}>Ekspor hasil JSON</button>
       </div>
 
       <div className="results-panel" style={{ display: "block" }}>
-        <h3>Validation summary</h3>
+        <h3>Ringkasan validasi</h3>
         <div className="metric-grid">
-          <div className="metric"><div className="metric-num green">{Math.round(metrics.precision * 100)}%</div><div className="metric-lbl">Precision</div></div>
+          <div className="metric"><div className="metric-num green">{Math.round(metrics.precision * 100)}%</div><div className="metric-lbl">Presisi</div></div>
           <div className="metric"><div className="metric-num amber">{Math.round(metrics.recall * 100)}%</div><div className="metric-lbl">Recall</div></div>
-          <div className="metric"><div className="metric-num">{Math.round(metrics.f1 * 100)}%</div><div className="metric-lbl">F1 score</div></div>
+          <div className="metric"><div className="metric-num">{Math.round(metrics.f1 * 100)}%</div><div className="metric-lbl">Skor F1</div></div>
         </div>
         <div className="error-breakdown">
-          <div className="section-label">Error breakdown</div>
-          <div className="error-row"><span>Correct</span><span className="badge" style={{ background: "#E1F5EE", color: "#0F6E56" }}>{metrics.correct}</span></div>
-          <div className="error-row"><span>Partially correct</span><span className="badge" style={{ background: "#FAEEDA", color: "#854F0B" }}>{metrics.partial}</span></div>
-          <div className="error-row"><span>Wrong</span><span className="badge" style={{ background: "#FAECE7", color: "#993C1D" }}>{metrics.wrong}</span></div>
-          <div className="error-row"><span>Missing (added by expert)</span><span className="badge" style={{ background: "#E6F1FB", color: "#185FA5" }}>{metrics.missing}</span></div>
-          <div className="error-row"><span>Unrated</span><span className="badge" style={{ background: "var(--color-background-secondary)", color: "var(--color-text-secondary)" }}>{metrics.unrated}</span></div>
+          <div className="section-label">Rincian hasil</div>
+          <div className="error-row"><span>Benar</span><span className="badge" style={{ background: "#E1F5EE", color: "#0F6E56" }}>{metrics.correct}</span></div>
+          <div className="error-row"><span>Sebagian benar</span><span className="badge" style={{ background: "#FAEEDA", color: "#854F0B" }}>{metrics.partial}</span></div>
+          <div className="error-row"><span>Salah</span><span className="badge" style={{ background: "#FAECE7", color: "#993C1D" }}>{metrics.wrong}</span></div>
+          <div className="error-row"><span>Kurang konteks (ditambahkan expert)</span><span className="badge" style={{ background: "#E6F1FB", color: "#185FA5" }}>{metrics.missing}</span></div>
+          <div className="error-row"><span>Belum dinilai</span><span className="badge" style={{ background: "var(--color-background-secondary)", color: "var(--color-text-secondary)" }}>{metrics.unrated}</span></div>
         </div>
       </div>
     </div>
