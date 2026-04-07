@@ -35,7 +35,10 @@ export default function LoginPage() {
   return (
     <main className="shell-center">
       <form className="auth-card" onSubmit={onSubmit}>
-        <h1>Tinjauan graf pengetahuan</h1>
+        <div className="faculty-logo-wrap" aria-hidden="true">
+          <img className="faculty-logo" src="/faculty-logo.png" alt="Logo fakultas" />
+        </div>
+        <h1>Validasi graf pengetahuan</h1>
         <p>Masuk menggunakan akun admin atau expert yang sudah diberikan.</p>
 
         <label>Nama pengguna</label>

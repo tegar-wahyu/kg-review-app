@@ -3,7 +3,7 @@ import "./globals.css";
 import "katex/dist/katex.min.css";
 
 export const metadata: Metadata = {
-  title: "Tinjauan Graf Pengetahuan",
+  title: "Validasi Graf Pengetahuan",
   description: "Alur review oleh expert dengan pengelolaan mata pelajaran oleh admin.",
 };
 
