@@ -10,6 +10,8 @@ export default function AdminPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState<CourseRecord[]>([]);
+  const [experts, setExperts] = useState<string[]>([]);
+  const [selectedExpertByCourse, setSelectedExpertByCourse] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
 
@@ -26,15 +28,35 @@ export default function AdminPage() {
       return;
     }
 
-    const res = await fetch("/api/admin/courses", { cache: "no-store" });
-    if (!res.ok) {
+    const [coursesRes, expertsRes] = await Promise.all([
+      fetch("/api/admin/courses", { cache: "no-store" }),
+      fetch("/api/admin/experts", { cache: "no-store" }),
+    ]);
+
+    if (!coursesRes.ok) {
       setError("Gagal memuat mata pelajaran.");
       setLoading(false);
       return;
     }
 
-    const data = (await res.json()) as { courses: CourseRecord[] };
+    const data = (await coursesRes.json()) as { courses: CourseRecord[] };
     setCourses(data.courses);
+
+    if (expertsRes.ok) {
+      const expertData = (await expertsRes.json()) as { experts: string[] };
+      const nextExperts = expertData.experts || [];
+      setExperts(nextExperts);
+      setSelectedExpertByCourse((prev) => {
+        const next = { ...prev };
+        for (const course of data.courses) {
+          if (!next[course.id] && nextExperts[0]) {
+            next[course.id] = nextExperts[0];
+          }
+        }
+        return next;
+      });
+    }
+
     setLoading(false);
   }, [router]);
 
@@ -97,6 +119,16 @@ export default function AdminPage() {
     router.replace("/login");
   };
 
+  const openExpertResponse = (courseId: string) => {
+    const selected = selectedExpertByCourse[courseId] || experts[0];
+    if (!selected) {
+      setError("Belum ada akun expert yang tersedia.");
+      return;
+    }
+
+    router.push(`/admin/review/${courseId}/${encodeURIComponent(selected)}`);
+  };
+
   if (loading) {
     return <main className="page-wrap">Memuat...</main>;
   }
@@ -132,6 +164,27 @@ export default function AdminPage() {
               <button className="btn-primary" onClick={() => togglePublish(course)}>
                 {course.published ? "Batalkan publikasi" : "Publikasikan"}
               </button>
+              <div className="expert-view-controls">
+                <select
+                  className="expert-select"
+                  value={selectedExpertByCourse[course.id] || experts[0] || ""}
+                  onChange={(event) =>
+                    setSelectedExpertByCourse((prev) => ({
+                      ...prev,
+                      [course.id]: event.target.value,
+                    }))
+                  }
+                  disabled={experts.length === 0}
+                >
+                  {experts.length === 0 ? <option value="">Tidak ada expert</option> : null}
+                  {experts.map((username) => (
+                    <option key={username} value={username}>{username}</option>
+                  ))}
+                </select>
+                <button className="btn-outline" onClick={() => openExpertResponse(course.id)}>
+                  Lihat respons expert
+                </button>
+              </div>
             </div>
           </div>
         ))}

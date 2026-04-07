@@ -48,6 +48,36 @@ export default function AvailableCoursesPage() {
       </div>
       <p className="muted">Pilih mata pelajaran yang sudah dipublikasikan untuk melanjutkan review.</p>
 
+      <section className="onboarding-box" aria-label="Panduan onboarding reviewer">
+        <p className="onboarding-kicker">ONBOARDING REVIEWER GURU</p>
+        <h2>LLM-Assisted Knowledge Graph Completion untuk Pemetaan Interkoneksi Materi Sains (Fisika, Kimia, Biologi) pada Kurikulum Merdeka Tingkat SMA</h2>
+        <p>
+          Terima kasih telah berpartisipasi sebagai reviewer. Peran Anda adalah memvalidasi keterkaitan konsep agar
+          representasi pengetahuan antarmateri sains menjadi akurat, relevan, dan dapat dipertanggungjawabkan secara pedagogis.
+        </p>
+        <p className="phase-active-note">
+          Fase aktif saat ini: <strong>Fase 1 - Validasi KG per Mata Pelajaran</strong>
+        </p>
+        <div className="onboarding-phases">
+          <article className="onboarding-phase-card active">
+            <p className="phase-status">Sedang Berjalan</p>
+            <h3>Fase 1: Validasi KG per Mata Pelajaran</h3>
+            <p>
+              Tinjau relasi konsep di dalam satu mata pelajaran secara mandiri (Fisika/Kimia/Biologi). Pastikan node,
+              arah relasi, dan makna hubungan sesuai konteks kurikulum.
+            </p>
+          </article>
+          <article className="onboarding-phase-card inactive">
+            <p className="phase-status">Tahap Berikutnya</p>
+            <h3>Fase 2: KG Terinterkoneksi Antarmata Pelajaran</h3>
+            <p>
+              Setelah validasi per mata pelajaran selesai, lakukan penilaian interkoneksi lintas mapel untuk melihat
+              kesinambungan konsep dan peluang integrasi pembelajaran sains secara utuh.
+            </p>
+          </article>
+        </div>
+      </section>
+
       <div className="course-list">
         {courses.map((course) => (
           <div className="course-card" key={course.id}>

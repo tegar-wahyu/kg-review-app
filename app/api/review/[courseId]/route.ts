@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserFromRequest } from "@/lib/auth";
+import { getConfiguredExpertUsernames, getUserFromRequest } from "@/lib/auth";
 import { getCourseById, getProgress, saveProgress } from "@/lib/storage";
 import { ReviewProgress } from "@/lib/types";
 
@@ -23,8 +23,19 @@ export async function GET(
     return NextResponse.json({ error: "Mata pelajaran belum dipublikasikan" }, { status: 403 });
   }
 
-  const progress = await getProgress(user.username, courseId);
-  return NextResponse.json({ course, progress });
+  const viewedExpert = request.nextUrl.searchParams.get("expert")?.trim() || "";
+  const expertUsernames = new Set(getConfiguredExpertUsernames());
+  const progressOwner =
+    user.role === "admin" && viewedExpert
+      ? viewedExpert
+      : user.username;
+
+  if (user.role === "admin" && viewedExpert && !expertUsernames.has(viewedExpert)) {
+    return NextResponse.json({ error: "Username expert tidak dikenal" }, { status: 400 });
+  }
+
+  const progress = await getProgress(progressOwner, courseId);
+  return NextResponse.json({ course, progress, progressOwner });
 }
 
 export async function POST(
@@ -47,11 +58,19 @@ export async function POST(
     return NextResponse.json({ error: "Mata pelajaran belum dipublikasikan" }, { status: 403 });
   }
 
+  const viewedExpert = request.nextUrl.searchParams.get("expert")?.trim() || "";
+  if (user.role === "admin" && viewedExpert) {
+    return NextResponse.json({ error: "Mode lihat respons expert bersifat read-only" }, { status: 403 });
+  }
+
   const body = (await request.json()) as Partial<ReviewProgress>;
+  const existing = await getProgress(user.username, courseId);
   const progress: ReviewProgress = {
     ratings: body.ratings || {},
     comments: body.comments || {},
     missingTriples: body.missingTriples || [],
+    generalFeedback: body.generalFeedback ?? existing?.generalFeedback,
+    completedAt: body.completedAt ?? existing?.completedAt,
     updatedAt: new Date().toISOString(),
   };
 
