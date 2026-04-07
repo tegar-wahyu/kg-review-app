@@ -356,13 +356,22 @@ textarea {
   margin-bottom: 1.15rem;
 }
 
+.header h1,
+.header h2 {
+  font-size: clamp(1.05rem, 1.5vw, 1.2rem);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 2px;
+  line-height: 1.35;
+}
+
 .breadcrumb {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 0.5rem;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .breadcrumb-link {
@@ -390,17 +399,10 @@ textarea {
   color: var(--color-text-secondary);
 }
 
-.header h2 {
-  font-size: 18px;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  margin-bottom: 4px;
-}
-
 .header p {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--color-text-secondary);
-  line-height: 1.45;
+  line-height: 1.55;
 }
 
 .review-status-row {
@@ -485,10 +487,10 @@ textarea {
 }
 
 .chapter-name {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--color-text-primary);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
 }
 
 .nav-actions {
@@ -501,6 +503,12 @@ textarea {
   margin-bottom: 0;
   background: transparent;
   justify-content: flex-end;
+}
+
+.chapter-nav-bottom .btn-primary,
+.chapter-nav-bottom .btn-outline {
+  padding: 7px 14px;
+  font-size: 12px;
 }
 
 .stats-row {
@@ -533,7 +541,7 @@ textarea {
 }
 
 .stat-label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-text-secondary);
   margin-bottom: 4px;
 }
@@ -626,7 +634,7 @@ textarea {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .node {
@@ -634,13 +642,13 @@ textarea {
   border: 0.5px solid var(--color-border-secondary);
   border-radius: var(--border-radius-md);
   padding: 6px 12px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--color-text-primary);
 }
 
 .rel-badge {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-text-secondary);
   background: var(--color-background-tertiary);
   border-radius: 99px;
@@ -654,10 +662,10 @@ textarea {
 }
 
 .triple-desc {
-  font-size: 20px;
-  color: #5b667a;
-  margin-bottom: 14px;
-  line-height: 1.8;
+  font-size: 17px;
+  color: #475569;
+  margin-bottom: 12px;
+  line-height: 1.65;
   border-left: 4px solid #e2e8f0;
   padding-left: 14px;
 }
@@ -690,7 +698,7 @@ textarea {
 }
 
 .rating-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--color-text-primary);
   letter-spacing: 0.02em;
@@ -698,7 +706,7 @@ textarea {
 }
 
 .rating-hint {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-secondary);
 }
 
@@ -718,7 +726,7 @@ textarea {
   border-radius: 14px;
   background: var(--color-background-primary);
   padding: 10px 14px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-secondary);
   font-weight: 500;
   transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease, color 0.15s ease;
@@ -790,12 +798,13 @@ textarea {
   width: 100%;
   border: 0.5px solid var(--color-border-tertiary);
   border-radius: var(--border-radius-md);
-  padding: 8px 10px;
-  font-size: 12px;
-  background: var(--color-background-secondary);
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--color-background-primary);
   color: var(--color-text-primary);
   resize: vertical;
-  min-height: 48px;
+  min-height: 64px;
 }
 
 .readonly-note {
@@ -811,7 +820,7 @@ textarea {
 }
 
 .results-panel {
-  background: var(--color-background-primary);
+  background: #fcfdff;
   border: 0.5px solid var(--color-border-tertiary);
   border-radius: var(--border-radius-lg);
   padding: 1.1rem 1.2rem;
@@ -851,7 +860,7 @@ textarea {
 }
 
 .metric-lbl {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-text-secondary);
   margin-top: 2px;
 }
@@ -881,7 +890,7 @@ textarea {
 .badge {
   padding: 2px 8px;
   border-radius: 99px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
 }
 
@@ -955,7 +964,7 @@ textarea {
 .tab {
   padding: 6px 14px;
   border-radius: 99px;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
   border: 0.5px solid var(--color-border-tertiary);
   color: var(--color-text-secondary);
@@ -1120,10 +1129,14 @@ textarea {
 
   .rating-row {
     gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
   }
 
   .rating-btn {
     justify-content: center;
+    width: 100%;
   }
 
   .answer-status {
@@ -1133,8 +1146,8 @@ textarea {
   }
 
   .triple-desc {
-    font-size: 18px;
-    line-height: 1.75;
+    font-size: 16px;
+    line-height: 1.6;
   }
 
   .missing-graph {
@@ -1179,7 +1192,7 @@ textarea {
   }
 
   .chapter-name {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .review-status-row {

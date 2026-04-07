@@ -287,7 +287,7 @@ export default function ReviewApp({
         </nav>
 
         <div className="top-row">
-          <h2>{datasetTitle}</h2>
+          <h1>{datasetTitle}</h1>
           <div className="row-actions">
             <button className="btn-outline" onClick={() => setShowLogoutModal(true)}>Keluar</button>
           </div>
