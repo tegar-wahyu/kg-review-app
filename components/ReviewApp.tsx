@@ -191,6 +191,10 @@ export default function ReviewApp({
     };
   }, [chapterTriples, chapterRatings, missingTriples, currentChapterName]);
 
+  const remainingOverall = useMemo(() => {
+    return triples.reduce((count, triple) => (ratings[String(triple.id)] ? count : count + 1), 0);
+  }, [triples, ratings]);
+
   const rate = (id: number, value: ReviewRating) => {
     if (readOnly) return;
     setRatings((prev) => ({ ...prev, [id]: value }));
@@ -271,10 +275,10 @@ export default function ReviewApp({
   const handleNextAction = () => {
     if (atLastChapter) {
       if (readOnly) return;
-    //   if (remainingOverall > 0) {
-    //     setFinishWarning(`Review belum selesai. Masih ada ${remainingOverall} triple yang belum tervalidasi di seluruh bab.`);
-    //     return;
-    //   }
+      if (remainingOverall > 0) {
+        setFinishWarning(`Review belum selesai. Masih ada ${remainingOverall} triple yang belum tervalidasi di seluruh bab.`);
+        return;
+      }
 
       setFinishWarning("");
       router.push(`/review/${courseId}/complete`);
