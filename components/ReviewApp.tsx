@@ -191,10 +191,6 @@ export default function ReviewApp({
     };
   }, [chapterTriples, chapterRatings, missingTriples, currentChapterName]);
 
-  const remainingOverall = useMemo(() => {
-    return triples.reduce((count, triple) => (ratings[String(triple.id)] ? count : count + 1), 0);
-  }, [triples, ratings]);
-
   const rate = (id: number, value: ReviewRating) => {
     if (readOnly) return;
     setRatings((prev) => ({ ...prev, [id]: value }));
