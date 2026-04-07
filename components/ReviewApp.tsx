@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { extractTriples } from "@/lib/extract";
 import LatexText from "@/components/LatexText";
@@ -42,6 +42,7 @@ export default function ReviewApp({
   expertUsername?: string;
 }) {
   const router = useRouter();
+  const tripleRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [triples, setTriples] = useState<ExtractedTriple[]>([]);
@@ -264,6 +265,12 @@ export default function ReviewApp({
     setCurrentChapterIndex((prev) => Math.min(chapterOrder.length - 1, prev + 1));
   };
 
+  const jumpToTriple = (id: number) => {
+    const target = tripleRefs.current[id];
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
   if (loading) {
     return <main className="page-wrap">Memuat review...</main>;
   }
@@ -334,6 +341,9 @@ export default function ReviewApp({
             <div className="chapter-title-row">
               <span className="chapter-index">Bab {currentChapterIndex + 1}/{chapterOrder.length}</span>
               <span className="chapter-name">{currentChapterName || "-"}</span>
+              <span className={`chapter-remaining ${metrics.unrated === 0 ? "is-complete" : ""}`}>
+                {metrics.unrated === 0 ? "Bab selesai" : `${metrics.unrated} tersisa`}
+              </span>
             </div>
           </div>
           <div className="nav-actions">
@@ -362,14 +372,34 @@ export default function ReviewApp({
           ) : null}
         </div>
 
-        <div className={`stats-row ${isExpert ? "stats-row-compact" : ""}`}>
-          <div className="stat"><div className="stat-label">Triple ditinjau</div><div className="stat-val">{metrics.reviewed}/{metrics.total}</div></div>
+        <div className={`stats-row stats-row-with-jump ${isExpert ? "stats-row-compact" : ""}`}>
+          <div className="jump-triple" aria-label="Lompat ke triple">
+            <div className="jump-triple-head">
+              <span className="jump-triple-label">Lompat triple</span>
+              <span className="jump-triple-summary">{metrics.reviewed}/{metrics.total} divalidasi</span>
+            </div>
+            <div className="jump-triple-buttons">
+              {chapterTriples.map((triple, index) => {
+                const ratingValue = ratings[String(triple.id)];
+                return (
+                  <button
+                    key={triple.id}
+                    className={`jump-btn ${ratingValue ? `is-${ratingValue}` : ""}`}
+                    onClick={() => jumpToTriple(triple.id)}
+                    title={`Triple ${index + 1}${ratingValue ? ` (${ratingValue})` : " (belum dinilai)"}`}
+                    type="button"
+                  >
+                    {index + 1}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           {!isExpert ? <div className="stat"><div className="stat-label">Presisi</div><div className="stat-val green">{Math.round(metrics.precision * 100)}%</div></div> : null}
           {!isExpert ? <div className="stat"><div className="stat-label">Recall</div><div className="stat-val amber">{Math.round(metrics.recall * 100)}%</div></div> : null}
           {!isExpert ? <div className="stat"><div className="stat-label">Skor F1</div><div className="stat-val">{Math.round(metrics.f1 * 100)}%</div></div> : null}
         </div>
 
-        <div className="progress-bar"><div className="progress-fill" style={{ width: metrics.total > 0 ? `${Math.round((metrics.reviewed / metrics.total) * 100)}%` : "0%" }} /></div>
       </div>
 
       <div id="triples-container">
@@ -378,7 +408,14 @@ export default function ReviewApp({
           const selectedRating = ratingOptions.find((option) => option.value === rating);
 
           return (
-            <div className={`triple-card ${rating ? "done" : ""}`} data-rating={rating || "unrated"} key={triple.id}>
+            <div
+              className={`triple-card ${rating ? "done" : ""}`}
+              data-rating={rating || "unrated"}
+              key={triple.id}
+              ref={(element) => {
+                tripleRefs.current[triple.id] = element;
+              }}
+            >
               <div className="triple-meta">
                 <span className="subtopic-tag">{triple.subtopic}</span>
                 {!isExpert && !triple.glossary_validated ? (

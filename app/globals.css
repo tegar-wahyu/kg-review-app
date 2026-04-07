@@ -505,6 +505,25 @@ textarea {
   letter-spacing: -0.015em;
 }
 
+.chapter-remaining {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #eef4fb;
+  border: 1px solid #cfe0f4;
+  color: #1f4f84;
+}
+
+.chapter-remaining.is-complete {
+  background: #e9f8ef;
+  border-color: #b7e1c1;
+  color: #166534;
+}
+
 .nav-actions {
   display: flex;
   gap: 8px;
@@ -530,6 +549,10 @@ textarea {
   margin-bottom: 0.75rem;
 }
 
+.stats-row-with-jump {
+  grid-template-columns: minmax(220px, 2fr) repeat(3, minmax(0, 1fr));
+}
+
 .stats-row-compact {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -552,6 +575,79 @@ textarea {
   padding: 12px 14px;
 }
 
+.jump-triple {
+  background: var(--color-background-secondary);
+  border-radius: var(--border-radius-md);
+  padding: 10px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.jump-triple-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.jump-triple-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.jump-triple-summary {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.jump-triple-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.jump-btn {
+  min-width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.jump-btn:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.jump-btn.is-correct {
+  background: #eaf8ef;
+  border-color: #86d4a4;
+  color: #0f6e56;
+}
+
+.jump-btn.is-partial {
+  background: #fff6df;
+  border-color: #f1d16a;
+  color: #8a5a00;
+}
+
+.jump-btn.is-wrong {
+  background: #feeeea;
+  border-color: #f0b0a4;
+  color: #b93821;
+}
+
+.jump-btn.is-missing {
+  background: #ebf3ff;
+  border-color: #b8ccff;
+  color: #185fa5;
+}
+
 .stat-label {
   font-size: 12px;
   color: var(--color-text-secondary);
@@ -572,21 +668,6 @@ textarea {
 .stat-val.amber,
 .metric-num.amber {
   color: #ba7517;
-}
-
-.progress-bar {
-  background: var(--color-background-secondary);
-  border-radius: 99px;
-  height: 6px;
-  margin-bottom: 0;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: #1d9e75;
-  border-radius: 99px;
-  transition: width 0.3s;
 }
 
 .triple-card {
@@ -1144,6 +1225,10 @@ textarea {
     gap: 8px;
   }
 
+  .jump-triple {
+    grid-column: 1 / -1;
+  }
+
   .triple-card {
     padding: 0.9rem;
   }
@@ -1214,6 +1299,12 @@ textarea {
 
   .chapter-name {
     font-size: 18px;
+  }
+
+  .chapter-remaining {
+    font-size: 11px;
+    min-height: 24px;
+    padding: 4px 9px;
   }
 
   .review-status-row {
