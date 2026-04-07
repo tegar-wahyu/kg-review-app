@@ -64,6 +64,8 @@ export type ReviewProgress = {
   ratings: Record<string, ReviewRating>;
   comments: Record<string, string>;
   missingTriples: MissingTriple[];
+  generalFeedback?: string;
+  completedAt?: string;
   updatedAt: string;
 };
 

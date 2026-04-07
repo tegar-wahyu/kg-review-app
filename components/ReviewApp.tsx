@@ -44,6 +44,8 @@ export default function ReviewApp({
   const router = useRouter();
   const tripleRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const confettiTimerRef = useRef<number | null>(null);
+  const completeRedirectTimerRef = useRef<number | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [triples, setTriples] = useState<ExtractedTriple[]>([]);
@@ -80,6 +82,9 @@ export default function ReviewApp({
     return () => {
       if (confettiTimerRef.current !== null) {
         window.clearTimeout(confettiTimerRef.current);
+      }
+      if (completeRedirectTimerRef.current !== null) {
+        window.clearTimeout(completeRedirectTimerRef.current);
       }
     };
   }, []);
@@ -154,6 +159,7 @@ export default function ReviewApp({
   const atFirstChapter = currentChapterIndex <= 0;
   const atLastChapter = currentChapterIndex >= chapterOrder.length - 1;
   const isExpert = role === "expert";
+
   const saveTone = useMemo(() => {
     if (readOnly) return "readonly";
     if (saveState.startsWith("Menyimpan")) return "saving";
@@ -214,9 +220,7 @@ export default function ReviewApp({
   }, [chapterTriples, chapterRatings, missingTriples, currentChapterName]);
 
   const remainingOverall = useMemo(() => {
-    return triples.reduce((count, triple) => {
-      return ratings[String(triple.id)] ? count : count + 1;
-    }, 0);
+    return triples.reduce((count, triple) => (ratings[String(triple.id)] ? count : count + 1), 0);
   }, [triples, ratings]);
 
   const rate = (id: number, value: ReviewRating) => {
@@ -302,15 +306,24 @@ export default function ReviewApp({
     if (confettiTimerRef.current !== null) {
       window.clearTimeout(confettiTimerRef.current);
     }
+    if (completeRedirectTimerRef.current !== null) {
+      window.clearTimeout(completeRedirectTimerRef.current);
+    }
 
     confettiTimerRef.current = window.setTimeout(() => {
       setShowConfetti(false);
       confettiTimerRef.current = null;
     }, 2400);
+
+    completeRedirectTimerRef.current = window.setTimeout(() => {
+      router.push(`/review/${courseId}/complete`);
+      completeRedirectTimerRef.current = null;
+    }, 1500);
   };
 
   const handleNextAction = () => {
     if (atLastChapter) {
+      if (readOnly) return;
       if (remainingOverall > 0) {
         setFinishWarning(`Review belum selesai. Masih ada ${remainingOverall} triple yang belum tervalidasi di seluruh bab.`);
         return;
@@ -325,7 +338,8 @@ export default function ReviewApp({
     goToNextChapter();
   };
 
-  const nextButtonLabel = atLastChapter ? "Selesaikan review" : "Bab berikutnya";
+  const nextButtonLabel = atLastChapter && !readOnly ? "Selesaikan validasi" : "Bab berikutnya";
+  const nextButtonDisabled = readOnly && atLastChapter;
 
   const jumpToTriple = (id: number) => {
     const target = tripleRefs.current[id];
@@ -435,6 +449,7 @@ export default function ReviewApp({
             </button>
             <button
               className="btn-primary"
+              disabled={nextButtonDisabled}
               onClick={handleNextAction}
             >
               {nextButtonLabel}
@@ -479,13 +494,11 @@ export default function ReviewApp({
         </div>
 
         {finishWarning ? <p className="finish-warning">{finishWarning}</p> : null}
-
       </div>
 
       <div id="triples-container">
         {visibleTriples.map((triple) => {
           const rating = ratings[String(triple.id)];
-          const selectedRating = ratingOptions.find((option) => option.value === rating);
 
           return (
             <div
@@ -603,6 +616,7 @@ export default function ReviewApp({
           </button>
           <button
             className="btn-primary"
+            disabled={nextButtonDisabled}
             onClick={handleNextAction}
           >
             {nextButtonLabel}

@@ -64,10 +64,13 @@ export async function POST(
   }
 
   const body = (await request.json()) as Partial<ReviewProgress>;
+  const existing = await getProgress(user.username, courseId);
   const progress: ReviewProgress = {
     ratings: body.ratings || {},
     comments: body.comments || {},
     missingTriples: body.missingTriples || [],
+    generalFeedback: body.generalFeedback ?? existing?.generalFeedback,
+    completedAt: body.completedAt ?? existing?.completedAt,
     updatedAt: new Date().toISOString(),
   };
 
