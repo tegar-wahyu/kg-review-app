@@ -397,10 +397,10 @@ export default function ReviewApp({
               <LatexText as="div" className="triple-desc" text={triple.description} />
 
               <div className="rating-group">
-                {/* <div className="rating-label-row">
+                <div className="rating-label-row">
                   <span className="rating-label">Penilaian</span>
                   <span className="rating-hint">Pilih satu status yang paling sesuai</span>
-                </div> */}
+                </div>
 
                 <div className="rating-row" role="group" aria-label="Pilihan penilaian">
                   {ratingOptions.map((option) => {
