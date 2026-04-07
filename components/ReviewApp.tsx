@@ -328,47 +328,49 @@ export default function ReviewApp({
         </div>
       ) : null}
 
-      <div className="chapter-nav">
-        <div className="chapter-info">
-          <div className="chapter-title-row">
-            <span className="chapter-index">Bab {currentChapterIndex + 1}/{chapterOrder.length}</span>
-            <span className="chapter-name">{currentChapterName || "-"}</span>
+      <div className="review-toolbar">
+        <div className="chapter-nav">
+          <div className="chapter-info">
+            <div className="chapter-title-row">
+              <span className="chapter-index">Bab {currentChapterIndex + 1}/{chapterOrder.length}</span>
+              <span className="chapter-name">{currentChapterName || "-"}</span>
+            </div>
+          </div>
+          <div className="nav-actions">
+            <button
+              className="btn-outline"
+              disabled={atFirstChapter}
+              onClick={goToPreviousChapter}
+            >
+              Bab sebelumnya
+            </button>
+            <button
+              className="btn-primary"
+              disabled={atLastChapter}
+              onClick={goToNextChapter}
+            >
+              Bab berikutnya
+            </button>
           </div>
         </div>
-        <div className="nav-actions">
-          <button
-            className="btn-outline"
-            disabled={atFirstChapter}
-            onClick={goToPreviousChapter}
-          >
-            Bab sebelumnya
-          </button>
-          <button
-            className="btn-primary"
-            disabled={atLastChapter}
-            onClick={goToNextChapter}
-          >
-            Bab berikutnya
-          </button>
+
+        <div className="tab-row" id="filter-tabs">
+          <button className={`tab ${currentFilter === "all" ? "active" : ""}`} onClick={() => setCurrentFilter("all")}>Semua</button>
+          <button className={`tab ${currentFilter === "unrated" ? "active" : ""}`} onClick={() => setCurrentFilter("unrated")}>Belum dinilai</button>
+          {!isExpert ? (
+            <button className={`tab ${currentFilter === "flagged" ? "active" : ""}`} onClick={() => setCurrentFilter("flagged")}>Perlu dicek</button>
+          ) : null}
         </div>
-      </div>
 
-      <div className="tab-row" id="filter-tabs">
-        <button className={`tab ${currentFilter === "all" ? "active" : ""}`} onClick={() => setCurrentFilter("all")}>Semua</button>
-        <button className={`tab ${currentFilter === "unrated" ? "active" : ""}`} onClick={() => setCurrentFilter("unrated")}>Belum dinilai</button>
-        {!isExpert ? (
-          <button className={`tab ${currentFilter === "flagged" ? "active" : ""}`} onClick={() => setCurrentFilter("flagged")}>Perlu dicek</button>
-        ) : null}
-      </div>
+        <div className={`stats-row ${isExpert ? "stats-row-compact" : ""}`}>
+          <div className="stat"><div className="stat-label">Triple ditinjau</div><div className="stat-val">{metrics.reviewed}/{metrics.total}</div></div>
+          {!isExpert ? <div className="stat"><div className="stat-label">Presisi</div><div className="stat-val green">{Math.round(metrics.precision * 100)}%</div></div> : null}
+          {!isExpert ? <div className="stat"><div className="stat-label">Recall</div><div className="stat-val amber">{Math.round(metrics.recall * 100)}%</div></div> : null}
+          {!isExpert ? <div className="stat"><div className="stat-label">Skor F1</div><div className="stat-val">{Math.round(metrics.f1 * 100)}%</div></div> : null}
+        </div>
 
-      <div className={`stats-row ${isExpert ? "stats-row-compact" : ""}`}>
-        <div className="stat"><div className="stat-label">Triple ditinjau</div><div className="stat-val">{metrics.reviewed}/{metrics.total}</div></div>
-        {!isExpert ? <div className="stat"><div className="stat-label">Presisi</div><div className="stat-val green">{Math.round(metrics.precision * 100)}%</div></div> : null}
-        {!isExpert ? <div className="stat"><div className="stat-label">Recall</div><div className="stat-val amber">{Math.round(metrics.recall * 100)}%</div></div> : null}
-        {!isExpert ? <div className="stat"><div className="stat-label">Skor F1</div><div className="stat-val">{Math.round(metrics.f1 * 100)}%</div></div> : null}
+        <div className="progress-bar"><div className="progress-fill" style={{ width: metrics.total > 0 ? `${Math.round((metrics.reviewed / metrics.total) * 100)}%` : "0%" }} /></div>
       </div>
-
-      <div className="progress-bar"><div className="progress-fill" style={{ width: metrics.total > 0 ? `${Math.round((metrics.reviewed / metrics.total) * 100)}%` : "0%" }} /></div>
 
       <div id="triples-container">
         {visibleTriples.map((triple) => {
