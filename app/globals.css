@@ -192,36 +192,58 @@ textarea {
   line-height: 1.6;
 }
 
-.phase-active-note {
-  background: #eaf6ed;
-  border: 0.5px solid #b7e1c1;
-  color: #1f6b3b;
-  border-radius: var(--border-radius-md);
-  padding: 0.62rem 0.8rem;
-  font-size: 13px;
-  line-height: 1.55;
+.onboarding-box-compact {
+  gap: 0.7rem;
+  padding: 0.9rem 1.1rem;
+}
+
+.onboarding-summary {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.onboarding-summary > div {
+  width: 100%;
+}
+
+.phase-inline-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #46607a;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.3rem;
+}
+
+.onboarding-brief {
+  margin-top: 0.3rem;
+  max-width: none;
+  font-size: 1rem;
+  line-height: 1.65;
+  color: #4c6078;
+  font-weight: 400;
 }
 
 .onboarding-phases {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem;
+  gap: 0.75rem;
 }
 
 .onboarding-phase-card {
   background: var(--color-background-primary);
   border: 0.5px solid #d8e1ee;
   border-radius: var(--border-radius-md);
-  padding: 0.95rem 1rem;
+  padding: 0.85rem 0.95rem;
 }
 
 .onboarding-phase-card.active {
-  border: 1px solid #1f8a4c;
-  box-shadow: 0 8px 18px rgba(31, 138, 76, 0.12);
+  border: 1px solid #8cc9a2;
+  box-shadow: 0 6px 16px rgba(28, 92, 54, 0.08);
 }
 
 .onboarding-phase-card.inactive {
-  opacity: 0.84;
+  background: rgba(255, 255, 255, 0.84);
 }
 
 .phase-status {
@@ -231,7 +253,7 @@ textarea {
   text-transform: uppercase;
   border-radius: 999px;
   padding: 3px 9px;
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.35rem;
   font-weight: 700;
 }
 
@@ -248,14 +270,14 @@ textarea {
 .onboarding-phase-card h3 {
   font-size: 15px;
   color: #1f3348;
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.3rem;
   line-height: 1.45;
 }
 
 .onboarding-phase-card p {
   font-size: 13px;
   color: #526276;
-  line-height: 1.65;
+  line-height: 1.55;
 }
 
 .available-page {
@@ -263,23 +285,44 @@ textarea {
   gap: 1rem;
 }
 
+.available-header {
+  display: grid;
+  gap: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.available-header .top-row {
+  align-items: flex-start;
+}
+
+.available-header .top-row > div {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.available-header .onboarding-kicker {
+  margin: 0;
+}
+
 .available-header h1 {
-  font-size: clamp(1.35rem, 2.2vw, 1.7rem);
-  line-height: 1.25;
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  line-height: 1.08;
   letter-spacing: -0.015em;
+  margin: 0;
 }
 
 .available-subtitle {
-  margin-top: -0.45rem;
-  font-size: 0.97rem;
-  line-height: 1.65;
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.7;
+  max-width: 70ch;
 }
 
 .course-section {
   background: #ffffff;
   border: 0.5px solid var(--color-border-tertiary);
   border-radius: var(--border-radius-lg);
-  padding: 1rem;
+  padding: 1.1rem;
 }
 
 .course-section-head {
@@ -322,6 +365,24 @@ textarea {
   font-size: 1rem;
   line-height: 1.45;
   margin-bottom: 0.15rem;
+}
+
+.available-course-card {
+  padding: 1.15rem 1.2rem;
+  align-items: center;
+}
+
+.course-card-copy {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.course-card-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #0f6e56;
 }
 
 .row-actions {
@@ -1406,6 +1467,15 @@ textarea {
   .course-card {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .available-header h1 {
+    font-size: 1.85rem;
+    line-height: 1.12;
+  }
+
+  .available-header {
+    gap: 0.75rem;
   }
 
   .course-section {

@@ -37,6 +37,7 @@ export type CourseRecord = {
   title: string;
   grade: string;
   published: boolean;
+  assignedExpert?: string | null;
   uploadedAt: string;
   payload: CoursePayload;
 };

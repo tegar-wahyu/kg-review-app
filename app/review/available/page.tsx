@@ -41,57 +41,74 @@ export default function AvailableCoursesPage() {
   }
 
   return (
-    <main className="page-wrap">
-      <div className="top-row">
-        <h1>Mata pelajaran tersedia</h1>
-        <button className="btn-outline" onClick={logout}>Keluar</button>
-      </div>
-      <p className="muted">Pilih mata pelajaran yang sudah dipublikasikan untuk melanjutkan review.</p>
+    <main className="page-wrap available-page">
+      <header className="available-header">
+        <div className="top-row">
+          <div>
+            <p className="onboarding-kicker">Reviewer Guru</p>
+            <h1>Mata pelajaran tersedia</h1>
+          </div>
+          <button className="btn-outline" onClick={logout}>Keluar</button>
+        </div>
+        <p className="muted available-subtitle">
+          Pilih mata pelajaran yang sudah dipublikasikan untuk melanjutkan review. Fokus saat ini ada pada validasi KG
+          per mata pelajaran.
+        </p>
+      </header>
 
-      <section className="onboarding-box" aria-label="Panduan onboarding reviewer">
-        <p className="onboarding-kicker">ONBOARDING REVIEWER GURU</p>
-        <h2>LLM-Assisted Knowledge Graph Completion untuk Pemetaan Interkoneksi Materi Sains (Fisika, Kimia, Biologi) pada Kurikulum Merdeka Tingkat SMA</h2>
-        <p>
-          Terima kasih telah berpartisipasi sebagai reviewer. Peran Anda adalah memvalidasi keterkaitan konsep agar
-          representasi pengetahuan antarmateri sains menjadi akurat, relevan, dan dapat dipertanggungjawabkan secara pedagogis.
-        </p>
-        <p className="phase-active-note">
-          Fase aktif saat ini: <strong>Fase 1 - Validasi KG per Mata Pelajaran</strong>
-        </p>
+      <section className="onboarding-box onboarding-box-compact" aria-label="Panduan onboarding reviewer">
+        <div className="onboarding-summary">
+          <div>
+            <p className="phase-inline-label">Fase aktif</p>
+            <h2>Fase 1 - Validasi KG per Mata Pelajaran</h2>
+            <p className="onboarding-brief">
+              Terima kasih telah berpartisipasi sebagai reviewer. Bapak/Ibu diminta memeriksa apakah keterkaitan
+              antarkonsep pada mata pelajaran yang dipilih sudah tepat, relevan, dan sesuai dengan konteks pembelajaran.
+            </p>
+          </div>
+        </div>
+
         <div className="onboarding-phases">
           <article className="onboarding-phase-card active">
-            <p className="phase-status">Sedang Berjalan</p>
-            <h3>Fase 1: Validasi KG per Mata Pelajaran</h3>
-            <p>
-              Tinjau relasi konsep di dalam satu mata pelajaran secara mandiri (Fisika/Kimia/Biologi). Pastikan node,
-              arah relasi, dan makna hubungan sesuai konteks kurikulum.
-            </p>
+            <p className="phase-status">Sekarang</p>
+            <h3>Validasi per mapel</h3>
+            <p>Pastikan node, arah relasi, dan makna hubungan sudah sesuai konteks kurikulum pada mapel yang dipilih.</p>
           </article>
           <article className="onboarding-phase-card inactive">
-            <p className="phase-status">Tahap Berikutnya</p>
-            <h3>Fase 2: KG Terinterkoneksi Antarmata Pelajaran</h3>
-            <p>
-              Setelah validasi per mata pelajaran selesai, lakukan penilaian interkoneksi lintas mapel untuk melihat
-              kesinambungan konsep dan peluang integrasi pembelajaran sains secara utuh.
-            </p>
+            <p className="phase-status">Berikutnya</p>
+            <h3>Interkoneksi antarmapel</h3>
+            <p>Tahap lanjutan untuk menilai kesinambungan konsep lintas Fisika, Kimia, dan Biologi.</p>
           </article>
         </div>
       </section>
 
-      <div className="course-list">
-        {courses.map((course) => (
-          <div className="course-card" key={course.id}>
-            <div>
-              <h3>{course.title}</h3>
-              <p className="muted small">{course.published ? "Dipublikasikan" : "Draf"}</p>
-            </div>
-            <button className="btn-primary" onClick={() => router.push(`/review/${course.id}`)}>
-              Mulai review
-            </button>
+      <section className="course-section" aria-label="Daftar mata pelajaran">
+        <div className="course-section-head">
+          <div>
+            <h2>Daftar mata pelajaran</h2>
+            <p className="muted small">Aksi utama dimulai dari sini.</p>
           </div>
-        ))}
-        {courses.length === 0 ? <p className="muted">Belum ada mata pelajaran yang bisa direview. Minta admin untuk mempublikasikannya.</p> : null}
-      </div>
+          <span className="course-count">{courses.length} tersedia</span>
+        </div>
+
+        <div className="course-list">
+          {courses.map((course) => (
+            <div className="course-card available-course-card" key={course.id}>
+              <div className="course-card-copy">
+                <p className="course-card-label">{course.published ? "Siap direview" : "Belum dipublikasikan"}</p>
+                <h3>{course.title}</h3>
+                <p className="muted small">Pilih untuk mulai meninjau keterkaitan konsep pada mata pelajaran ini.</p>
+              </div>
+              <button className="btn-primary" onClick={() => router.push(`/review/${course.id}`)}>
+                Mulai review
+              </button>
+            </div>
+          ))}
+          {courses.length === 0 ? (
+            <p className="muted">Belum ada mata pelajaran yang bisa direview. Minta admin untuk mempublikasikannya.</p>
+          ) : null}
+        </div>
+      </section>
     </main>
   );
 }
