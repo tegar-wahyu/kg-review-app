@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { extractTriples } from "@/lib/extract";
 import LatexText from "@/components/LatexText";
@@ -43,6 +43,7 @@ export default function ReviewApp({
 }) {
   const router = useRouter();
   const tripleRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const confettiTimerRef = useRef<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [triples, setTriples] = useState<ExtractedTriple[]>([]);
@@ -58,6 +59,30 @@ export default function ReviewApp({
   const [role, setRole] = useState<"admin" | "expert">("expert");
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [progressOwner, setProgressOwner] = useState("");
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [finishWarning, setFinishWarning] = useState("");
+
+  const confettiPieces = useMemo(
+    () =>
+      Array.from({ length: 32 }, (_, index) => ({
+        id: index,
+        left: `${(index * 7 + (index % 4) * 6) % 100}%`,
+        delay: `${(index % 8) * 0.08}s`,
+        duration: `${2 + (index % 5) * 0.18}s`,
+        drift: `${-16 + (index % 9) * 4}px`,
+        rotate: `${(index % 2 === 0 ? 1 : -1) * (180 + (index % 6) * 45)}deg`,
+        hue: `${(index * 33) % 360}`,
+      })),
+    [],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (confettiTimerRef.current !== null) {
+        window.clearTimeout(confettiTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -188,6 +213,12 @@ export default function ReviewApp({
     };
   }, [chapterTriples, chapterRatings, missingTriples, currentChapterName]);
 
+  const remainingOverall = useMemo(() => {
+    return triples.reduce((count, triple) => {
+      return ratings[String(triple.id)] ? count : count + 1;
+    }, 0);
+  }, [triples, ratings]);
+
   const rate = (id: number, value: ReviewRating) => {
     if (readOnly) return;
     setRatings((prev) => ({ ...prev, [id]: value }));
@@ -265,6 +296,37 @@ export default function ReviewApp({
     setCurrentChapterIndex((prev) => Math.min(chapterOrder.length - 1, prev + 1));
   };
 
+  const fireConfetti = () => {
+    setShowConfetti(true);
+
+    if (confettiTimerRef.current !== null) {
+      window.clearTimeout(confettiTimerRef.current);
+    }
+
+    confettiTimerRef.current = window.setTimeout(() => {
+      setShowConfetti(false);
+      confettiTimerRef.current = null;
+    }, 2400);
+  };
+
+  const handleNextAction = () => {
+    if (atLastChapter) {
+      if (remainingOverall > 0) {
+        setFinishWarning(`Review belum selesai. Masih ada ${remainingOverall} triple yang belum tervalidasi di seluruh bab.`);
+        return;
+      }
+
+      setFinishWarning("");
+      fireConfetti();
+      return;
+    }
+
+    setFinishWarning("");
+    goToNextChapter();
+  };
+
+  const nextButtonLabel = atLastChapter ? "Selesaikan review" : "Bab berikutnya";
+
   const jumpToTriple = (id: number) => {
     const target = tripleRefs.current[id];
     if (!target) return;
@@ -335,6 +397,23 @@ export default function ReviewApp({
         </div>
       ) : null}
 
+      {showConfetti ? (
+        <div className="confetti-layer" aria-hidden="true">
+          {confettiPieces.map((piece) => {
+            const confettiStyle: CSSProperties & Record<string, string> = {
+              left: piece.left,
+              animationDelay: piece.delay,
+              animationDuration: piece.duration,
+              "--confetti-drift": piece.drift,
+              "--confetti-rotate": piece.rotate,
+              "--confetti-hue": piece.hue,
+            };
+
+            return <span key={piece.id} className="confetti-piece" style={confettiStyle} />;
+          })}
+        </div>
+      ) : null}
+
       <div className="review-toolbar">
         <div className="chapter-nav">
           <div className="chapter-info">
@@ -356,10 +435,9 @@ export default function ReviewApp({
             </button>
             <button
               className="btn-primary"
-              disabled={atLastChapter}
-              onClick={goToNextChapter}
+              onClick={handleNextAction}
             >
-              Bab berikutnya
+              {nextButtonLabel}
             </button>
           </div>
         </div>
@@ -376,7 +454,7 @@ export default function ReviewApp({
           <div className="jump-triple" aria-label="Lompat ke triple">
             <div className="jump-triple-head">
               <span className="jump-triple-label">Lompat triple</span>
-              <span className="jump-triple-summary">{metrics.reviewed}/{metrics.total} divalidasi</span>
+              <span className="jump-triple-summary">{metrics.reviewed}/{metrics.total} direview</span>
             </div>
             <div className="jump-triple-buttons">
               {chapterTriples.map((triple, index) => {
@@ -399,6 +477,8 @@ export default function ReviewApp({
           {!isExpert ? <div className="stat"><div className="stat-label">Recall</div><div className="stat-val amber">{Math.round(metrics.recall * 100)}%</div></div> : null}
           {!isExpert ? <div className="stat"><div className="stat-label">Skor F1</div><div className="stat-val">{Math.round(metrics.f1 * 100)}%</div></div> : null}
         </div>
+
+        {finishWarning ? <p className="finish-warning">{finishWarning}</p> : null}
 
       </div>
 
@@ -523,10 +603,9 @@ export default function ReviewApp({
           </button>
           <button
             className="btn-primary"
-            disabled={atLastChapter}
-            onClick={goToNextChapter}
+            onClick={handleNextAction}
           >
-            Bab berikutnya
+            {nextButtonLabel}
           </button>
         </div>
       </div>
