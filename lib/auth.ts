@@ -44,6 +44,10 @@ function getUsers(): AuthUser[] {
   ];
 }
 
+export function getConfiguredExpertUsernames() {
+  return getExpertUsers().map((user) => user.username);
+}
+
 const USERS = getUsers();
 
 function secretKey() {

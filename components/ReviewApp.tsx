@@ -15,6 +15,7 @@ import {
 type ReviewPayload = {
   course: CourseRecord;
   progress: ReviewProgress | null;
+  progressOwner?: string;
 };
 
 type SessionPayload = {
@@ -31,7 +32,15 @@ const ratingOptions: Array<{ value: ReviewRating; label: string; symbol: string;
   { value: "missing", label: "Kurang konteks", symbol: "+", tone: "missing" },
 ];
 
-export default function ReviewApp({ courseId }: { courseId: string }) {
+export default function ReviewApp({
+  courseId,
+  readOnly = false,
+  expertUsername,
+}: {
+  courseId: string;
+  readOnly?: boolean;
+  expertUsername?: string;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -42,11 +51,12 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
   const [currentFilter, setCurrentFilter] = useState<"all" | "unrated" | "flagged">("all");
   const [chapterOrder, setChapterOrder] = useState<string[]>([]);
   const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
-  const [datasetTitle, setDatasetTitle] = useState("Tinjauan ahli graf pengetahuan");
+  const [datasetTitle, setDatasetTitle] = useState("Validasi ahli graf pengetahuan");
   const [saveState, setSaveState] = useState("Belum disimpan");
   const [readyToSave, setReadyToSave] = useState(false);
   const [role, setRole] = useState<"admin" | "expert">("expert");
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [progressOwner, setProgressOwner] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -59,7 +69,8 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
       const meData = (await me.json()) as SessionPayload;
       setRole(meData.user.role);
 
-      const res = await fetch(`/api/review/${courseId}`, { cache: "no-store" });
+      const query = readOnly && expertUsername ? `?expert=${encodeURIComponent(expertUsername)}` : "";
+      const res = await fetch(`/api/review/${courseId}${query}`, { cache: "no-store" });
       if (!res.ok) {
         setError("Gagal memuat data review.");
         setLoading(false);
@@ -70,7 +81,8 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
       const extracted = extractTriples(data.course.payload);
       const chapters = Array.from(new Set(extracted.map((item) => item.chapter || "Tanpa Kategori")));
 
-      setDatasetTitle(data.course.title || "Tinjauan ahli graf pengetahuan");
+      setDatasetTitle(data.course.title || "Validasi ahli graf pengetahuan");
+      setProgressOwner(data.progressOwner || "");
       setTriples(extracted);
       setChapterOrder(chapters.length ? chapters : ["Tanpa Kategori"]);
       setCurrentChapterIndex(0);
@@ -82,15 +94,15 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
       }
 
       setLoading(false);
-      setReadyToSave(true);
-      setSaveState("Dimuat");
+      setReadyToSave(!readOnly);
+      setSaveState(readOnly ? "Mode lihat (read-only)" : "Dimuat");
     };
 
     load();
-  }, [courseId, router]);
+  }, [courseId, router, readOnly, expertUsername]);
 
   useEffect(() => {
-    if (!readyToSave) return;
+    if (!readyToSave || readOnly) return;
 
     const timer = setTimeout(async () => {
       setSaveState("Menyimpan...");
@@ -110,11 +122,19 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
     }, 700);
 
     return () => clearTimeout(timer);
-  }, [ratings, comments, missingTriples, readyToSave, courseId]);
+  }, [ratings, comments, missingTriples, readyToSave, courseId, readOnly]);
 
   const currentChapterName = chapterOrder[currentChapterIndex] || chapterOrder[0] || "";
   const atFirstChapter = currentChapterIndex <= 0;
   const atLastChapter = currentChapterIndex >= chapterOrder.length - 1;
+  const isExpert = role === "expert";
+  const saveTone = useMemo(() => {
+    if (readOnly) return "readonly";
+    if (saveState.startsWith("Menyimpan")) return "saving";
+    if (saveState.startsWith("Tersimpan")) return "saved";
+    if (saveState.startsWith("Gagal")) return "error";
+    return "idle";
+  }, [saveState, readOnly]);
 
   const chapterTriples = useMemo(() => {
     return triples.filter((triple) => (triple.chapter || "Tanpa Kategori") === currentChapterName);
@@ -168,10 +188,13 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
   }, [chapterTriples, chapterRatings, missingTriples, currentChapterName]);
 
   const rate = (id: number, value: ReviewRating) => {
+    if (readOnly) return;
     setRatings((prev) => ({ ...prev, [id]: value }));
   };
 
   const addMissing = () => {
+    if (readOnly) return;
+
     const subjectInput = document.getElementById("m-subject") as HTMLInputElement | null;
     const relationInput = document.getElementById("m-relation") as HTMLInputElement | null;
     const targetInput = document.getElementById("m-target") as HTMLInputElement | null;
@@ -269,7 +292,17 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
             <button className="btn-outline" onClick={() => setShowLogoutModal(true)}>Keluar</button>
           </div>
         </div>
-        <p>Tinjau setiap triple, progres akan tersimpan otomatis. {saveState}</p>
+        <div className="review-status-row">
+          <p>Tinjau setiap triple, progres akan tersimpan otomatis.</p>
+          <span className={`autosave-pill autosave-${saveTone}`} aria-live="polite">
+            {saveState}
+          </span>
+        </div>
+        {readOnly ? (
+          <p className="readonly-note">
+            Mode lihat respons expert: <strong>{progressOwner || expertUsername || "expert"}</strong>. Penilaian tidak dapat diubah dari halaman admin.
+          </p>
+        ) : null}
       </div>
 
       {showLogoutModal ? (
@@ -323,14 +356,16 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
       <div className="tab-row" id="filter-tabs">
         <button className={`tab ${currentFilter === "all" ? "active" : ""}`} onClick={() => setCurrentFilter("all")}>Semua</button>
         <button className={`tab ${currentFilter === "unrated" ? "active" : ""}`} onClick={() => setCurrentFilter("unrated")}>Belum dinilai</button>
-        <button className={`tab ${currentFilter === "flagged" ? "active" : ""}`} onClick={() => setCurrentFilter("flagged")}>Perlu dicek</button>
+        {!isExpert ? (
+          <button className={`tab ${currentFilter === "flagged" ? "active" : ""}`} onClick={() => setCurrentFilter("flagged")}>Perlu dicek</button>
+        ) : null}
       </div>
 
-      <div className="stats-row">
+      <div className={`stats-row ${isExpert ? "stats-row-compact" : ""}`}>
         <div className="stat"><div className="stat-label">Triple ditinjau</div><div className="stat-val">{metrics.reviewed}/{metrics.total}</div></div>
-        <div className="stat"><div className="stat-label">Presisi</div><div className="stat-val green">{Math.round(metrics.precision * 100)}%</div></div>
-        <div className="stat"><div className="stat-label">Recall</div><div className="stat-val amber">{Math.round(metrics.recall * 100)}%</div></div>
-        <div className="stat"><div className="stat-label">Skor F1</div><div className="stat-val">{Math.round(metrics.f1 * 100)}%</div></div>
+        {!isExpert ? <div className="stat"><div className="stat-label">Presisi</div><div className="stat-val green">{Math.round(metrics.precision * 100)}%</div></div> : null}
+        {!isExpert ? <div className="stat"><div className="stat-label">Recall</div><div className="stat-val amber">{Math.round(metrics.recall * 100)}%</div></div> : null}
+        {!isExpert ? <div className="stat"><div className="stat-label">Skor F1</div><div className="stat-val">{Math.round(metrics.f1 * 100)}%</div></div> : null}
       </div>
 
       <div className="progress-bar"><div className="progress-fill" style={{ width: metrics.total > 0 ? `${Math.round((metrics.reviewed / metrics.total) * 100)}%` : "0%" }} /></div>
@@ -343,12 +378,8 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
           return (
             <div className={`triple-card ${rating ? "done" : ""}`} data-rating={rating || "unrated"} key={triple.id}>
               <div className="triple-meta">
-                <span className="chapter-tag">{triple.chapter}</span>
                 <span className="subtopic-tag">{triple.subtopic}</span>
-                <span className={`answer-status ${rating ? `status-${rating}` : "status-unrated"}`}>
-                  {rating ? `Sudah dijawab: ${selectedRating?.label}` : "Belum dijawab"}
-                </span>
-                {!triple.glossary_validated ? (
+                {!isExpert && !triple.glossary_validated ? (
                   <span className="badge" style={{ background: "#FAEEDA", color: "#854F0B", fontSize: "10px", padding: "2px 7px", borderRadius: "99px", marginLeft: "4px" }}>
                     belum divalidasi
                   </span>
@@ -366,10 +397,10 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
               <LatexText as="div" className="triple-desc" text={triple.description} />
 
               <div className="rating-group">
-                <div className="rating-label-row">
+                {/* <div className="rating-label-row">
                   <span className="rating-label">Penilaian</span>
                   <span className="rating-hint">Pilih satu status yang paling sesuai</span>
-                </div>
+                </div> */}
 
                 <div className="rating-row" role="group" aria-label="Pilihan penilaian">
                   {ratingOptions.map((option) => {
@@ -380,6 +411,7 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
                         key={option.value}
                         aria-pressed={isSelected}
                         className={`rating-btn ${isSelected ? `selected-${option.tone}` : ""}`}
+                        disabled={readOnly}
                         onClick={() => rate(triple.id, option.value)}
                       >
                         <span className="rating-symbol">{option.symbol}</span>
@@ -392,8 +424,9 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
 
               <textarea
                 className="comment-input"
-                placeholder="Komentar opsional..."
+                placeholder={readOnly ? "Komentar expert (read-only)" : "Komentar opsional..."}
                 value={comments[String(triple.id)] || ""}
+                readOnly={readOnly}
                 onChange={(event) =>
                   setComments((prev) => ({
                     ...prev,
@@ -405,24 +438,24 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
           );
         })}
 
-        {currentFilter === "all" ? (
+        {currentFilter === "all" && !readOnly ? (
           <div className="triple-card" style={{ borderStyle: "dashed" }}>
             <div className="missing-title">Tambah triple yang belum ada</div>
             <div className="missing-form">
               <div className="missing-graph">
                 <div className="missing-field missing-subject">
                   <label htmlFor="m-subject">Subjek</label>
-                  <input type="text" id="m-subject" placeholder="mis. Enzim" />
+                  <input type="text" id="m-subject" placeholder="cth. Enzim" />
                 </div>
                 <span className="missing-arrow" aria-hidden="true">→</span>
                 <div className="missing-field missing-relation">
                   <label htmlFor="m-relation">Relasi</label>
-                  <input type="text" id="m-relation" placeholder="mis. MEMBUTUHKAN" />
+                  <input type="text" id="m-relation" placeholder="cth. MEMBUTUHKAN" />
                 </div>
                 <span className="missing-arrow" aria-hidden="true">→</span>
                 <div className="missing-field missing-target">
                   <label htmlFor="m-target">Target</label>
-                  <input type="text" id="m-target" placeholder="mis. Air" />
+                  <input type="text" id="m-target" placeholder="cth. Air" />
                 </div>
               </div>
 
@@ -459,17 +492,21 @@ export default function ReviewApp({ courseId }: { courseId: string }) {
         </div>
       </div>
 
-      <div className="actions-row">
-        <button className="btn-primary" onClick={exportResults}>Ekspor hasil JSON</button>
-      </div>
+      {!isExpert ? (
+        <div className="actions-row">
+          <button className="btn-primary" onClick={exportResults}>Ekspor hasil JSON</button>
+        </div>
+      ) : null}
 
       <div className="results-panel" style={{ display: "block" }}>
-        <h3>Ringkasan validasi</h3>
-        <div className="metric-grid">
-          <div className="metric"><div className="metric-num green">{Math.round(metrics.precision * 100)}%</div><div className="metric-lbl">Presisi</div></div>
-          <div className="metric"><div className="metric-num amber">{Math.round(metrics.recall * 100)}%</div><div className="metric-lbl">Recall</div></div>
-          <div className="metric"><div className="metric-num">{Math.round(metrics.f1 * 100)}%</div><div className="metric-lbl">Skor F1</div></div>
-        </div>
+        {!isExpert ? <h3>Ringkasan validasi</h3> : null}
+        {!isExpert ? (
+          <div className="metric-grid">
+            <div className="metric"><div className="metric-num green">{Math.round(metrics.precision * 100)}%</div><div className="metric-lbl">Presisi</div></div>
+            <div className="metric"><div className="metric-num amber">{Math.round(metrics.recall * 100)}%</div><div className="metric-lbl">Recall</div></div>
+            <div className="metric"><div className="metric-num">{Math.round(metrics.f1 * 100)}%</div><div className="metric-lbl">Skor F1</div></div>
+          </div>
+        ) : null}
         <div className="error-breakdown">
           <div className="section-label">Rincian hasil</div>
           <div className="error-row"><span>Benar</span><span className="badge" style={{ background: "#E1F5EE", color: "#0F6E56" }}>{metrics.correct}</span></div>
