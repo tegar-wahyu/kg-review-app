@@ -51,6 +51,7 @@ export default function ReviewApp({
   const [comments, setComments] = useState<Record<string, string>>({});
   const [missingTriples, setMissingTriples] = useState<MissingTriple[]>([]);
   const [currentFilter, setCurrentFilter] = useState<"all" | "unrated" | "flagged">("all");
+  const [currentSubtopic, setCurrentSubtopic] = useState("all");
   const [chapterOrder, setChapterOrder] = useState<string[]>([]);
   const [currentChapterIndex, setCurrentChapterIndex] = useState(0);
   const [datasetTitle, setDatasetTitle] = useState("Validasi ahli graf pengetahuan");
@@ -144,17 +145,53 @@ export default function ReviewApp({
     return triples.filter((triple) => (triple.chapter || "Tanpa Kategori") === currentChapterName);
   }, [triples, currentChapterName]);
 
+  const subtopicOptions = useMemo(() => {
+    const order = Array.from(
+      new Set(chapterTriples.map((triple) => triple.subtopic?.trim() || "Tanpa Subbab")),
+    );
+    return order;
+  }, [chapterTriples]);
+
   const visibleTriples = useMemo(() => {
+    let next = chapterTriples;
+
+    if (currentSubtopic !== "all") {
+      next = next.filter((triple) => (triple.subtopic?.trim() || "Tanpa Subbab") === currentSubtopic);
+    }
+
     if (currentFilter === "unrated") {
-      return chapterTriples.filter((triple) => !ratings[String(triple.id)]);
+      return next.filter((triple) => !ratings[String(triple.id)]);
     }
 
     if (currentFilter === "flagged") {
-      return chapterTriples.filter((triple) => !triple.glossary_validated);
+      return next.filter((triple) => !triple.glossary_validated);
     }
 
-    return chapterTriples;
-  }, [chapterTriples, currentFilter, ratings]);
+    return next;
+  }, [chapterTriples, currentFilter, currentSubtopic, ratings]);
+
+  const groupedVisibleTriples = useMemo(() => {
+    const groups = new Map<string, ExtractedTriple[]>();
+
+    for (const triple of visibleTriples) {
+      const subtopic = triple.subtopic?.trim() || "Tanpa Subbab";
+      const existing = groups.get(subtopic) || [];
+      existing.push(triple);
+      groups.set(subtopic, existing);
+    }
+
+    return Array.from(groups.entries()).map(([subtopic, items]) => ({ subtopic, items }));
+  }, [visibleTriples]);
+
+  const tripleOrderInChapter = useMemo(() => {
+    const lookup: Record<number, number> = {};
+
+    chapterTriples.forEach((triple, index) => {
+      lookup[triple.id] = index + 1;
+    });
+
+    return lookup;
+  }, [chapterTriples]);
 
   const chapterRatings = useMemo(() => {
     const ids = new Set(chapterTriples.map((triple) => String(triple.id)));
@@ -190,6 +227,10 @@ export default function ReviewApp({
       f1,
     };
   }, [chapterTriples, chapterRatings, missingTriples, currentChapterName]);
+
+  useEffect(() => {
+    setCurrentSubtopic("all");
+  }, [currentChapterName]);
 
   const remainingOverall = useMemo(() => {
     return triples.reduce((count, triple) => (ratings[String(triple.id)] ? count : count + 1), 0);
@@ -399,24 +440,45 @@ export default function ReviewApp({
           ) : null}
         </div>
 
+        <div className="review-filter-row">
+          <div className="review-filter-group">
+            <label className="review-filter-label" htmlFor="subtopic-filter">Filter subbab</label>
+            <select
+              id="subtopic-filter"
+              className="review-filter-select"
+              value={currentSubtopic}
+              onChange={(event) => setCurrentSubtopic(event.target.value)}
+            >
+              <option value="all">Semua subbab</option>
+              {subtopicOptions.map((subtopic) => (
+                <option key={subtopic} value={subtopic}>{subtopic}</option>
+              ))}
+            </select>
+          </div>
+          <span className="review-filter-summary">
+            {visibleTriples.length} triple ditampilkan
+          </span>
+        </div>
+
         <div className={`stats-row stats-row-with-jump ${isExpert ? "stats-row-compact" : ""}`}>
           <div className="jump-triple" aria-label="Lompat ke triple">
             <div className="jump-triple-head">
               <span className="jump-triple-label">Lompat triple</span>
-              <span className="jump-triple-summary">{metrics.reviewed}/{metrics.total} direview</span>
+              <span className="jump-triple-summary">{visibleTriples.length} tampil</span>
             </div>
             <div className="jump-triple-buttons">
-              {chapterTriples.map((triple, index) => {
+              {visibleTriples.map((triple, index) => {
                 const ratingValue = ratings[String(triple.id)];
+                const orderNumber = tripleOrderInChapter[triple.id] || index + 1;
                 return (
                   <button
                     key={triple.id}
                     className={`jump-btn ${ratingValue ? `is-${ratingValue}` : ""}`}
                     onClick={() => jumpToTriple(triple.id)}
-                    title={`Triple ${index + 1}${ratingValue ? ` (${ratingValue})` : " (belum dinilai)"}`}
+                    title={`Triple ${orderNumber}${ratingValue ? ` (${ratingValue})` : " (belum dinilai)"}`}
                     type="button"
                   >
-                    {index + 1}
+                    {orderNumber}
                   </button>
                 );
               })}
@@ -431,78 +493,100 @@ export default function ReviewApp({
       </div>
 
       <div id="triples-container">
-        {visibleTriples.map((triple) => {
-          const rating = ratings[String(triple.id)];
-
-          return (
-            <div
-              className={`triple-card ${rating ? "done" : ""}`}
-              data-rating={rating || "unrated"}
-              key={triple.id}
-              ref={(element) => {
-                tripleRefs.current[triple.id] = element;
-              }}
-            >
-              <div className="triple-meta">
-                <span className="subtopic-tag">{triple.subtopic}</span>
-                {!isExpert && !triple.glossary_validated ? (
-                  <span className="badge" style={{ background: "#FAEEDA", color: "#854F0B", fontSize: "10px", padding: "2px 7px", borderRadius: "99px", marginLeft: "4px" }}>
-                    belum divalidasi
-                  </span>
-                ) : null}
+        {groupedVisibleTriples.map((group) => (
+          <section className="subtopic-section" key={group.subtopic}>
+            <div className="subtopic-section-head">
+              <div>
+                <p className="subtopic-section-kicker">Subbab</p>
+                <h2>{group.subtopic}</h2>
               </div>
-
-              <div className="triple-body">
-                <LatexText as="span" className="node" text={triple.subject} />
-                <span className="arrow">→</span>
-                <LatexText as="span" className="rel-badge" text={triple.relation} />
-                <span className="arrow">→</span>
-                <LatexText as="span" className="node" text={triple.target} />
-              </div>
-
-              <LatexText as="div" className="triple-desc" text={triple.description} />
-
-              <div className="rating-group">
-                <div className="rating-label-row">
-                  <span className="rating-label">Penilaian</span>
-                  <span className="rating-hint">Pilih satu status yang paling sesuai</span>
-                </div>
-
-                <div className="rating-row" role="group" aria-label="Pilihan penilaian">
-                  {ratingOptions.map((option) => {
-                    const isSelected = rating === option.value;
-
-                    return (
-                      <button
-                        key={option.value}
-                        aria-pressed={isSelected}
-                        className={`rating-btn ${isSelected ? `selected-${option.tone}` : ""}`}
-                        disabled={readOnly}
-                        onClick={() => rate(triple.id, option.value)}
-                      >
-                        <span className="rating-symbol">{option.symbol}</span>
-                        <span>{option.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <textarea
-                className="comment-input"
-                placeholder={readOnly ? "Komentar expert (read-only)" : "Komentar opsional..."}
-                value={comments[String(triple.id)] || ""}
-                readOnly={readOnly}
-                onChange={(event) =>
-                  setComments((prev) => ({
-                    ...prev,
-                    [triple.id]: event.target.value,
-                  }))
-                }
-              />
+              <span className="subtopic-section-count">{group.items.length} triple</span>
             </div>
-          );
-        })}
+
+            <div className="subtopic-section-list">
+              {group.items.map((triple) => {
+                const rating = ratings[String(triple.id)];
+                const orderNumber = tripleOrderInChapter[triple.id] || 0;
+
+                return (
+                  <div
+                    className={`triple-card ${rating ? "done" : ""}`}
+                    data-rating={rating || "unrated"}
+                    key={triple.id}
+                    ref={(element) => {
+                      tripleRefs.current[triple.id] = element;
+                    }}
+                  >
+                    <div className="triple-meta">
+                      {!isExpert && !triple.glossary_validated ? (
+                        <span className="badge" style={{ background: "#FAEEDA", color: "#854F0B", fontSize: "10px", padding: "2px 7px", borderRadius: "99px" }}>
+                          belum divalidasi
+                        </span>
+                      ) : (
+                        <span className="triple-position">Triple {orderNumber}</span>
+                      )}
+                    </div>
+
+                    <div className="triple-body">
+                      <LatexText as="span" className="node" text={triple.subject} />
+                      <span className="arrow">→</span>
+                      <LatexText as="span" className="rel-badge" text={triple.relation} />
+                      <span className="arrow">→</span>
+                      <LatexText as="span" className="node" text={triple.target} />
+                    </div>
+
+                    <LatexText as="div" className="triple-desc" text={triple.description} />
+
+                    <div className="rating-group">
+                      <div className="rating-label-row">
+                        <span className="rating-label">Penilaian</span>
+                        <span className="rating-hint">Pilih satu status yang paling sesuai</span>
+                      </div>
+
+                      <div className="rating-row" role="group" aria-label="Pilihan penilaian">
+                        {ratingOptions.map((option) => {
+                          const isSelected = rating === option.value;
+
+                          return (
+                            <button
+                              key={option.value}
+                              aria-pressed={isSelected}
+                              className={`rating-btn ${isSelected ? `selected-${option.tone}` : ""}`}
+                              disabled={readOnly}
+                              onClick={() => rate(triple.id, option.value)}
+                            >
+                              <span className="rating-symbol">{option.symbol}</span>
+                              <span>{option.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <textarea
+                      className="comment-input"
+                      placeholder={readOnly ? "Komentar expert (read-only)" : "Komentar opsional..."}
+                      value={comments[String(triple.id)] || ""}
+                      readOnly={readOnly}
+                      onChange={(event) =>
+                        setComments((prev) => ({
+                          ...prev,
+                          [triple.id]: event.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+
+        {groupedVisibleTriples.length === 0 ? (
+          <div className="empty-filter-state">
+            Tidak ada triple yang cocok dengan filter saat ini untuk bab ini.
+          </div>
+        ) : null}
 
         {currentFilter === "all" && !readOnly ? (
           <div className="triple-card" style={{ borderStyle: "dashed" }}>

@@ -138,6 +138,34 @@ export async function updateCoursePublished(courseId: string, published: boolean
   return updated;
 }
 
+export async function updateCourseAssignment(
+  courseId: string,
+  assignedExpert: string | null,
+): Promise<CourseRecord | null> {
+  if (kvEnabled()) {
+    const courses = await readCoursesFromKV();
+    let updated: CourseRecord | null = null;
+
+    const next = courses.map((course) => {
+      if (course.id !== courseId) return course;
+      updated = { ...course, assignedExpert };
+      return updated;
+    });
+
+    if (!updated) return null;
+    await writeCoursesToKV(next);
+    return updated;
+  }
+
+  const store = getMemoryStore();
+  const course = store.courses.get(courseId);
+  if (!course) return null;
+
+  const updated = { ...course, assignedExpert };
+  store.courses.set(courseId, updated);
+  return updated;
+}
+
 export async function getProgress(username: string, courseId: string): Promise<ReviewProgress | null> {
   const key = `kg:progress:${username}:${courseId}`;
 

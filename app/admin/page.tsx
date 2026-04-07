@@ -49,7 +49,9 @@ export default function AdminPage() {
       setSelectedExpertByCourse((prev) => {
         const next = { ...prev };
         for (const course of data.courses) {
-          if (!next[course.id] && nextExperts[0]) {
+          if (course.assignedExpert) {
+            next[course.id] = course.assignedExpert;
+          } else if (!next[course.id] && nextExperts[0]) {
             next[course.id] = nextExperts[0];
           }
         }
@@ -96,12 +98,26 @@ export default function AdminPage() {
   };
 
   const togglePublish = async (course: CourseRecord) => {
+    const nextPublished = !course.published;
+    const assignedExpert = selectedExpertByCourse[course.id]?.trim() || "";
+    if (nextPublished && !assignedExpert) {
+      setError("Pilih akun expert sebelum mempublikasikan mata pelajaran.");
+      setStatus("");
+      return;
+    }
+
     setStatus("Menyimpan visibilitas...");
+    setError("");
 
     const res = await fetch(`/api/admin/courses/${course.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ published: !course.published }),
+      body: JSON.stringify({
+        published: nextPublished,
+        assignedExpert: nextPublished
+          ? assignedExpert
+          : (course.assignedExpert || assignedExpert || null),
+      }),
     });
 
     if (!res.ok) {
@@ -120,7 +136,8 @@ export default function AdminPage() {
   };
 
   const openExpertResponse = (courseId: string) => {
-    const selected = selectedExpertByCourse[courseId] || experts[0];
+    const course = courses.find((item) => item.id === courseId);
+    const selected = course?.assignedExpert || selectedExpertByCourse[courseId] || experts[0];
     if (!selected) {
       setError("Belum ada akun expert yang tersedia.");
       return;
@@ -174,7 +191,7 @@ export default function AdminPage() {
                       [course.id]: event.target.value,
                     }))
                   }
-                  disabled={experts.length === 0}
+                  disabled={experts.length === 0 || course.published}
                 >
                   {experts.length === 0 ? <option value="">Tidak ada expert</option> : null}
                   {experts.map((username) => (

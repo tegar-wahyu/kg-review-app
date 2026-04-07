@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
     grade: title,
     payload: body.payload,
     published: false,
+    assignedExpert: null,
     uploadedAt: new Date().toISOString(),
   };
 
