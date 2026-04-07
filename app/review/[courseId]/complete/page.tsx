@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { CSSProperties, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 type CompleteResponse = {
@@ -12,11 +12,40 @@ export default function ReviewCompletePage() {
   const router = useRouter();
   const params = useParams<{ courseId: string }>();
   const courseId = params.courseId;
+  const confettiTimerRef = useRef<number | null>(null);
 
   const [feedback, setFeedback] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const [showConfetti, setShowConfetti] = useState(true);
+
+  const confettiPieces = useMemo(
+    () =>
+      Array.from({ length: 32 }, (_, index) => ({
+        id: index,
+        left: `${(index * 7 + (index % 4) * 6) % 100}%`,
+        delay: `${(index % 8) * 0.08}s`,
+        duration: `${2 + (index % 5) * 0.18}s`,
+        drift: `${-16 + (index % 9) * 4}px`,
+        rotate: `${(index % 2 === 0 ? 1 : -1) * (180 + (index % 6) * 45)}deg`,
+        hue: `${(index * 33) % 360}`,
+      })),
+    [],
+  );
+
+  useEffect(() => {
+    confettiTimerRef.current = window.setTimeout(() => {
+      setShowConfetti(false);
+      confettiTimerRef.current = null;
+    }, 2400);
+
+    return () => {
+      if (confettiTimerRef.current !== null) {
+        window.clearTimeout(confettiTimerRef.current);
+      }
+    };
+  }, []);
 
   const submitFeedback = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -45,6 +74,23 @@ export default function ReviewCompletePage() {
 
   return (
     <main className="page-wrap review-complete-page">
+      {showConfetti ? (
+        <div className="confetti-layer" aria-hidden="true">
+          {confettiPieces.map((piece) => {
+            const confettiStyle: CSSProperties & Record<string, string> = {
+              left: piece.left,
+              animationDelay: piece.delay,
+              animationDuration: piece.duration,
+              "--confetti-drift": piece.drift,
+              "--confetti-rotate": piece.rotate,
+              "--confetti-hue": piece.hue,
+            };
+
+            return <span key={piece.id} className="confetti-piece" style={confettiStyle} />;
+          })}
+        </div>
+      ) : null}
+
       <section className="review-complete-card">
         <p className="review-complete-kicker">Validasi selesai</p>
         <h1>Review Anda telah tercatat</h1>

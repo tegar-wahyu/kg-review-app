@@ -1,6 +1,6 @@
 "use client";
 
-import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { extractTriples } from "@/lib/extract";
 import LatexText from "@/components/LatexText";
@@ -43,8 +43,6 @@ export default function ReviewApp({
 }) {
   const router = useRouter();
   const tripleRefs = useRef<Record<number, HTMLDivElement | null>>({});
-  const confettiTimerRef = useRef<number | null>(null);
-  const completeRedirectTimerRef = useRef<number | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -61,33 +59,7 @@ export default function ReviewApp({
   const [role, setRole] = useState<"admin" | "expert">("expert");
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [progressOwner, setProgressOwner] = useState("");
-  const [showConfetti, setShowConfetti] = useState(false);
   const [finishWarning, setFinishWarning] = useState("");
-
-  const confettiPieces = useMemo(
-    () =>
-      Array.from({ length: 32 }, (_, index) => ({
-        id: index,
-        left: `${(index * 7 + (index % 4) * 6) % 100}%`,
-        delay: `${(index % 8) * 0.08}s`,
-        duration: `${2 + (index % 5) * 0.18}s`,
-        drift: `${-16 + (index % 9) * 4}px`,
-        rotate: `${(index % 2 === 0 ? 1 : -1) * (180 + (index % 6) * 45)}deg`,
-        hue: `${(index * 33) % 360}`,
-      })),
-    [],
-  );
-
-  useEffect(() => {
-    return () => {
-      if (confettiTimerRef.current !== null) {
-        window.clearTimeout(confettiTimerRef.current);
-      }
-      if (completeRedirectTimerRef.current !== null) {
-        window.clearTimeout(completeRedirectTimerRef.current);
-      }
-    };
-  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -300,37 +272,16 @@ export default function ReviewApp({
     setCurrentChapterIndex((prev) => Math.min(chapterOrder.length - 1, prev + 1));
   };
 
-  const fireConfetti = () => {
-    setShowConfetti(true);
-
-    if (confettiTimerRef.current !== null) {
-      window.clearTimeout(confettiTimerRef.current);
-    }
-    if (completeRedirectTimerRef.current !== null) {
-      window.clearTimeout(completeRedirectTimerRef.current);
-    }
-
-    confettiTimerRef.current = window.setTimeout(() => {
-      setShowConfetti(false);
-      confettiTimerRef.current = null;
-    }, 2400);
-
-    completeRedirectTimerRef.current = window.setTimeout(() => {
-      router.push(`/review/${courseId}/complete`);
-      completeRedirectTimerRef.current = null;
-    }, 1500);
-  };
-
   const handleNextAction = () => {
     if (atLastChapter) {
       if (readOnly) return;
-      if (remainingOverall > 0) {
-        setFinishWarning(`Review belum selesai. Masih ada ${remainingOverall} triple yang belum tervalidasi di seluruh bab.`);
-        return;
-      }
+    //   if (remainingOverall > 0) {
+    //     setFinishWarning(`Review belum selesai. Masih ada ${remainingOverall} triple yang belum tervalidasi di seluruh bab.`);
+    //     return;
+    //   }
 
       setFinishWarning("");
-      fireConfetti();
+      router.push(`/review/${courseId}/complete`);
       return;
     }
 
@@ -408,23 +359,6 @@ export default function ReviewApp({
               </button>
             </div>
           </div>
-        </div>
-      ) : null}
-
-      {showConfetti ? (
-        <div className="confetti-layer" aria-hidden="true">
-          {confettiPieces.map((piece) => {
-            const confettiStyle: CSSProperties & Record<string, string> = {
-              left: piece.left,
-              animationDelay: piece.delay,
-              animationDuration: piece.duration,
-              "--confetti-drift": piece.drift,
-              "--confetti-rotate": piece.rotate,
-              "--confetti-hue": piece.hue,
-            };
-
-            return <span key={piece.id} className="confetti-piece" style={confettiStyle} />;
-          })}
         </div>
       ) : null}
 
