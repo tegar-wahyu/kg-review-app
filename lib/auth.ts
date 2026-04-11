@@ -14,10 +14,22 @@ type AuthUser = {
 const EXPERT_ENV_KEYS = [
   { usernameEnv: "EXPERT_KIMIA_1_USERNAME", passwordEnv: "EXPERT_KIMIA_1_PASSWORD" },
   { usernameEnv: "EXPERT_KIMIA_2_USERNAME", passwordEnv: "EXPERT_KIMIA_2_PASSWORD" },
+  { usernameEnv: "EXPERT_KIMIA_3_USERNAME", passwordEnv: "EXPERT_KIMIA_3_PASSWORD" },
+  { usernameEnv: "EXPERT_KIMIA_4_USERNAME", passwordEnv: "EXPERT_KIMIA_4_PASSWORD" },
+  { usernameEnv: "EXPERT_KIMIA_5_USERNAME", passwordEnv: "EXPERT_KIMIA_5_PASSWORD" },
+  { usernameEnv: "EXPERT_KIMIA_6_USERNAME", passwordEnv: "EXPERT_KIMIA_6_PASSWORD" },
   { usernameEnv: "EXPERT_FISIKA_1_USERNAME", passwordEnv: "EXPERT_FISIKA_1_PASSWORD" },
   { usernameEnv: "EXPERT_FISIKA_2_USERNAME", passwordEnv: "EXPERT_FISIKA_2_PASSWORD" },
+  { usernameEnv: "EXPERT_FISIKA_3_USERNAME", passwordEnv: "EXPERT_FISIKA_3_PASSWORD" },
+  { usernameEnv: "EXPERT_FISIKA_4_USERNAME", passwordEnv: "EXPERT_FISIKA_4_PASSWORD" },
+  { usernameEnv: "EXPERT_FISIKA_5_USERNAME", passwordEnv: "EXPERT_FISIKA_5_PASSWORD" },
+  { usernameEnv: "EXPERT_FISIKA_6_USERNAME", passwordEnv: "EXPERT_FISIKA_6_PASSWORD" },
   { usernameEnv: "EXPERT_BIOLOGI_1_USERNAME", passwordEnv: "EXPERT_BIOLOGI_1_PASSWORD" },
   { usernameEnv: "EXPERT_BIOLOGI_2_USERNAME", passwordEnv: "EXPERT_BIOLOGI_2_PASSWORD" },
+  { usernameEnv: "EXPERT_BIOLOGI_3_USERNAME", passwordEnv: "EXPERT_BIOLOGI_3_PASSWORD" },
+  { usernameEnv: "EXPERT_BIOLOGI_4_USERNAME", passwordEnv: "EXPERT_BIOLOGI_4_PASSWORD" },
+  { usernameEnv: "EXPERT_BIOLOGI_5_USERNAME", passwordEnv: "EXPERT_BIOLOGI_5_PASSWORD" },
+  { usernameEnv: "EXPERT_BIOLOGI_6_USERNAME", passwordEnv: "EXPERT_BIOLOGI_6_PASSWORD" },
 ] as const;
 
 function getExpertUsers(): AuthUser[] {
