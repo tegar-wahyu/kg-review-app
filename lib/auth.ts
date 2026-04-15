@@ -45,6 +45,17 @@ function getExpertUsers(): AuthUser[] {
   });
 }
 
+function getDummyUser(): AuthUser[] {
+  const username = process.env.DUMMY_EXPERT_USERNAME?.trim();
+  const password = process.env.DUMMY_EXPERT_PASSWORD;
+
+  if (!username || !password) {
+    return [];
+  }
+
+  return [{ username, password, role: "expert" as const }];
+}
+
 function getUsers(): AuthUser[] {
   return [
     {
@@ -53,6 +64,7 @@ function getUsers(): AuthUser[] {
       role: "admin" as const,
     },
     ...getExpertUsers(),
+    ...getDummyUser(),
   ];
 }
 
