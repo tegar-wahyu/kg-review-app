@@ -72,6 +72,17 @@ export function getConfiguredExpertUsernames() {
   return getExpertUsers().map((user) => user.username);
 }
 
+export type ExpertInfo = { username: string; subject: string };
+
+export function getConfiguredExperts(): ExpertInfo[] {
+  return EXPERT_ENV_KEYS.map(({ usernameEnv }) => {
+    const match = usernameEnv.match(/^EXPERT_(\w+?)_\d+_USERNAME$/);
+    const subject = match ? match[1].charAt(0) + match[1].slice(1).toLowerCase() : "Unknown";
+    const username = process.env[usernameEnv]?.trim();
+    return username ? { username, subject } : null;
+  }).filter((e): e is ExpertInfo => e !== null);
+}
+
 const USERS = getUsers();
 
 function secretKey() {
