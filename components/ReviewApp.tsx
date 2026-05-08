@@ -236,6 +236,12 @@ export default function ReviewApp({
     return triples.reduce((count, triple) => (ratings[String(triple.id)] ? count : count + 1), 0);
   }, [triples, ratings]);
 
+  const missingTriplesInCurrentChapter = useMemo(() => {
+    return missingTriples
+      .map((triple, index) => ({ triple, index }))
+      .filter(({ triple }) => triple.chapter === currentChapterName);
+  }, [missingTriples, currentChapterName]);
+
   const rate = (id: number, value: ReviewRating) => {
     if (readOnly) return;
     setRatings((prev) => ({ ...prev, [id]: value }));
@@ -274,6 +280,25 @@ export default function ReviewApp({
     if (relationInput) relationInput.value = "";
     if (targetInput) targetInput.value = "";
     if (descInput) descInput.value = "";
+  };
+
+  const updateMissingTriple = (index: number, field: keyof MissingTriple, value: string) => {
+    if (readOnly) return;
+
+    setMissingTriples((prev) =>
+      prev.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+        return {
+          ...item,
+          [field]: value,
+        };
+      }),
+    );
+  };
+
+  const removeMissingTriple = (index: number) => {
+    if (readOnly) return;
+    setMissingTriples((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
   };
 
   const exportResults = () => {
@@ -619,6 +644,72 @@ export default function ReviewApp({
                 </button>
               </div>
             </div>
+
+            {missingTriplesInCurrentChapter.length > 0 ? (
+              <div className="missing-list">
+                <div className="missing-list-title">Triple tambahan di bab ini</div>
+                <div className="missing-list-body">
+                  {missingTriplesInCurrentChapter.map(({ triple, index }, itemNumber) => (
+                    <div className="missing-item" key={`${index}-${triple.subject}-${triple.relation}-${triple.target}`}>
+                      <div className="missing-item-head">
+                        <span className="missing-item-index">Triple tambahan {itemNumber + 1}</span>
+                        <button
+                          className="btn-outline missing-item-delete"
+                          type="button"
+                          onClick={() => removeMissingTriple(index)}
+                        >
+                          Hapus
+                        </button>
+                      </div>
+
+                      <div className="missing-graph">
+                        <div className="missing-field missing-subject">
+                          <label htmlFor={`m-edit-subject-${index}`}>Subjek</label>
+                          <input
+                            type="text"
+                            id={`m-edit-subject-${index}`}
+                            value={triple.subject}
+                            onChange={(event) => updateMissingTriple(index, "subject", event.target.value)}
+                          />
+                        </div>
+                        <span className="missing-arrow" aria-hidden="true">→</span>
+                        <div className="missing-field missing-relation">
+                          <label htmlFor={`m-edit-relation-${index}`}>Relasi</label>
+                          <input
+                            type="text"
+                            id={`m-edit-relation-${index}`}
+                            value={triple.relation}
+                            onChange={(event) => updateMissingTriple(index, "relation", event.target.value)}
+                          />
+                        </div>
+                        <span className="missing-arrow" aria-hidden="true">→</span>
+                        <div className="missing-field missing-target">
+                          <label htmlFor={`m-edit-target-${index}`}>Target</label>
+                          <input
+                            type="text"
+                            id={`m-edit-target-${index}`}
+                            value={triple.target}
+                            onChange={(event) => updateMissingTriple(index, "target", event.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="missing-note-row">
+                        <div className="missing-field missing-desc">
+                          <label htmlFor={`m-edit-desc-${index}`}>Deskripsi tambahan</label>
+                          <input
+                            type="text"
+                            id={`m-edit-desc-${index}`}
+                            value={triple.description}
+                            onChange={(event) => updateMissingTriple(index, "description", event.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

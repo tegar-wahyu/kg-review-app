@@ -99,7 +99,8 @@ textarea {
 }
 
 .auth-card input,
-.missing-form input {
+.missing-form input,
+.missing-item input {
   width: 100%;
   border: 0.5px solid var(--color-border-tertiary);
   border-radius: var(--border-radius-md);
@@ -1350,6 +1351,53 @@ textarea {
 
 .missing-submit {
   min-height: 40px;
+}
+
+.missing-list {
+  margin-top: 16px;
+  border-top: 1px dashed #cbd5e1;
+  padding-top: 14px;
+}
+
+.missing-list-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 10px;
+}
+
+.missing-list-body {
+  display: grid;
+  gap: 12px;
+}
+
+.missing-item {
+  border: 1px solid #dbe5f2;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.missing-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.missing-item-index {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.missing-item-delete {
+  min-height: 32px;
+  padding-inline: 10px;
+  border-color: #fecaca;
+  color: #b91c1c;
 }
 
 .chapter-tag {
