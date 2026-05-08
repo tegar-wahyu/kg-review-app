@@ -130,6 +130,32 @@ export default function AdminPage() {
     await load();
   };
 
+  const updateAssignedExpert = async (courseId: string, expertUsername: string) => {
+    setSelectedExpertByCourse((prev) => ({
+      ...prev,
+      [courseId]: expertUsername,
+    }));
+
+    setStatus("Menyimpan expert pilihan...");
+    setError("");
+
+    const res = await fetch(`/api/admin/courses/${courseId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assignedExpert: expertUsername || null }),
+    });
+
+    if (!res.ok) {
+      setError("Gagal memperbarui expert yang dipilih.");
+      setStatus("");
+      await load();
+      return;
+    }
+
+    setStatus("Expert pilihan berhasil diperbarui.");
+    await load();
+  };
+
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     router.replace("/login");
@@ -186,12 +212,9 @@ export default function AdminPage() {
                   className="expert-select"
                   value={selectedExpertByCourse[course.id] || experts[0] || ""}
                   onChange={(event) =>
-                    setSelectedExpertByCourse((prev) => ({
-                      ...prev,
-                      [course.id]: event.target.value,
-                    }))
+                    updateAssignedExpert(course.id, event.target.value)
                   }
-                  disabled={experts.length === 0 || course.published}
+                  disabled={experts.length === 0}
                 >
                   {experts.length === 0 ? <option value="">Tidak ada expert</option> : null}
                   {experts.map((username) => (
