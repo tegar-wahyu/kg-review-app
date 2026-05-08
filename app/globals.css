@@ -408,6 +408,162 @@ textarea {
   min-width: 180px;
 }
 
+.summary-section {
+  margin-top: 1.2rem;
+}
+
+.summary-section h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.65rem;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+}
+
+.summary-table th {
+  background: var(--color-background-secondary);
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+}
+
+.summary-table td {
+  padding: 10px 14px;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  vertical-align: top;
+}
+
+.summary-table tr:last-child td {
+  border-bottom: none;
+}
+
+.summary-table tr:hover td {
+  background: #f8fafc;
+}
+
+.summary-subject-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 99px;
+  letter-spacing: 0.03em;
+}
+
+.summary-subject-badge.kimia {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.summary-subject-badge.fisika {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.summary-subject-badge.biologi {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.summary-course-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.summary-course-title {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.summary-progress-bar {
+  width: 60px;
+  height: 6px;
+  background: var(--color-background-tertiary);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.summary-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: #22c55e;
+  transition: width 0.2s ease;
+}
+
+.summary-progress-fill.incomplete {
+  background: #eab308;
+}
+
+.summary-progress-fill.not-started {
+  background: var(--color-border-primary);
+}
+
+.summary-status {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 4px;
+}
+
+.summary-status.completed {
+  color: #166534;
+}
+
+.summary-status.in-progress {
+  color: #8a5a00;
+}
+
+.summary-status.not-started {
+  color: var(--color-text-secondary);
+}
+
+.summary-empty {
+  color: var(--color-text-secondary);
+  font-style: italic;
+  font-size: 12px;
+}
+
+.summary-unassigned {
+  margin-top: 0.85rem;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.summary-unassigned ul {
+  margin-top: 0.3rem;
+  padding-left: 1.2rem;
+}
+
+.summary-unassigned li {
+  padding: 2px 0;
+}
+
+.summary-unassigned-tag {
+  font-size: 11px;
+  background: #fef2f2;
+  color: #991b1b;
+  padding: 2px 7px;
+  border-radius: 99px;
+  font-weight: 500;
+  margin-left: 6px;
+}
+
 @media (max-width: 768px) {
   .onboarding-phases {
     grid-template-columns: 1fr;
@@ -1566,8 +1722,24 @@ textarea {
     align-items: flex-start;
   }
 
-  .review-filter-select {
+  .review-filter-select,
+  .expert-select {
     min-width: 100%;
+    width: 100%;
+  }
+
+  .expert-view-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .row-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .row-actions > button,
+  .row-actions > .expert-view-controls > button {
     width: 100%;
   }
 
@@ -1690,5 +1862,14 @@ textarea {
   .review-complete-actions .btn-outline,
   .review-complete-actions .btn-primary {
     width: 100%;
+  }
+
+  .summary-table th,
+  .summary-table td {
+    padding: 8px 10px;
+  }
+
+  .summary-course-row {
+    flex-wrap: wrap;
   }
 }
