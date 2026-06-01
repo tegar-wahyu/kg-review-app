@@ -70,6 +70,33 @@ export type ReviewProgress = {
   updatedAt: string;
 };
 
+export type CompletionSurveyDirection = "Benar" | "Terbalik" | "NA";
+
+export type CompletionSurveyAnswer = {
+  relationValid?: "Ya" | "Tidak";
+  relationTypeCorrect?: "Benar" | "Salah";
+  correctedRelationType?: string;
+  directionCorrect?: CompletionSurveyDirection;
+  comment?: string;
+};
+
+export type CompletionSurveyProgress = {
+  answers: Record<string, CompletionSurveyAnswer>;
+  completedAt?: string;
+  updatedAt: string;
+};
+
+export type CompletionSurveyItem = {
+  id: string;
+  pair: string;
+  conceptA: string;
+  subjectA: string;
+  proposedRelation: string;
+  conceptB: string;
+  subjectB: string;
+  explanation: string;
+};
+
 export type SessionUser = {
   username: string;
   role: UserRole;

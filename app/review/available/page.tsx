@@ -51,34 +51,54 @@ export default function AvailableCoursesPage() {
           <button className="btn-outline" onClick={logout}>Keluar</button>
         </div>
         <p className="muted available-subtitle">
-          Pilih mata pelajaran yang sudah dipublikasikan untuk melanjutkan review. Fokus saat ini ada pada validasi KG
-          per mata pelajaran.
+          Pilih validasi yang ingin dilanjutkan. Fase 1 memeriksa KG per mata pelajaran, sedangkan fase 2 memeriksa
+          relasi completion lintas-buku.
         </p>
       </header>
 
       <section className="onboarding-box onboarding-box-compact" aria-label="Panduan onboarding reviewer">
         <div className="onboarding-summary">
           <div>
-            <p className="phase-inline-label">Fase aktif</p>
-            <h2>Fase 1 - Validasi KG per Mata Pelajaran</h2>
+            <p className="phase-inline-label">Alur validasi</p>
+            <h2>Validasi KG dan completion lintas-buku</h2>
             <p className="onboarding-brief">
               Terima kasih telah berpartisipasi sebagai reviewer. Bapak/Ibu diminta memeriksa apakah keterkaitan
-              antarkonsep pada mata pelajaran yang dipilih sudah tepat, relevan, dan sesuai dengan konteks pembelajaran.
+              antarkonsep sudah tepat, relevan, dan sesuai dengan konteks pembelajaran.
             </p>
           </div>
         </div>
 
         <div className="onboarding-phases">
           <article className="onboarding-phase-card active">
-            <p className="phase-status">Sekarang</p>
+            <p className="phase-status">Fase 1</p>
             <h3>Validasi per mapel</h3>
             <p>Pastikan node, arah relasi, dan makna hubungan sudah sesuai konteks kurikulum pada mapel yang dipilih.</p>
           </article>
-          <article className="onboarding-phase-card inactive">
-            <p className="phase-status">Berikutnya</p>
-            <h3>Interkoneksi antarmapel</h3>
-            <p>Tahap lanjutan untuk menilai kesinambungan konsep lintas Fisika, Kimia, dan Biologi.</p>
+          <article className="onboarding-phase-card active">
+            <p className="phase-status">Fase 2</p>
+            <h3>Completion lintas-buku</h3>
+            <p>Nilai validitas, tipe, dan arah relasi antarmapel dari survei completion Fisika, Kimia, dan Biologi.</p>
           </article>
+        </div>
+      </section>
+
+      <section className="course-section" aria-label="Validasi fase 2">
+        <div className="course-section-head">
+          <div>
+            <h2>Fase 2 - Validasi completion lintas-buku</h2>
+            <p className="muted small">117 relasi lintas-buku dari folder completion_survey.</p>
+          </div>
+        </div>
+
+        <div className="course-card available-course-card">
+          <div className="course-card-copy">
+            <p className="course-card-label">Siap direview</p>
+            <h3>Survei validasi relasi lintas-buku</h3>
+            <p className="muted small">Periksa apakah relasi, tipe relasi, dan arah relasi completion sudah tepat.</p>
+          </div>
+          <button className="btn-primary" onClick={() => router.push("/review/phase-2")}>
+            Mulai fase 2
+          </button>
         </div>
       </section>
 
