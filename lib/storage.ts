@@ -1,10 +1,11 @@
-import { CourseRecord, ReviewProgress } from "@/lib/types";
+import { CompletionSurveyProgress, CourseRecord, ReviewProgress } from "@/lib/types";
 
 const COURSES_KEY = "kg:courses";
 
 type MemoryStore = {
   courses: Map<string, CourseRecord>;
   progress: Map<string, ReviewProgress>;
+  completionSurveyProgress: Map<string, CompletionSurveyProgress>;
 };
 
 declare global {
@@ -17,7 +18,12 @@ function getMemoryStore(): MemoryStore {
     globalThis.__kgReviewMemoryStore = {
       courses: new Map<string, CourseRecord>(),
       progress: new Map<string, ReviewProgress>(),
+      completionSurveyProgress: new Map<string, CompletionSurveyProgress>(),
     };
+  }
+
+  if (!globalThis.__kgReviewMemoryStore.completionSurveyProgress) {
+    globalThis.__kgReviewMemoryStore.completionSurveyProgress = new Map<string, CompletionSurveyProgress>();
   }
 
   return globalThis.__kgReviewMemoryStore;
@@ -194,4 +200,37 @@ export async function saveProgress(username: string, courseId: string, progress:
 
   const store = getMemoryStore();
   store.progress.set(memoryKey(username, courseId), progress);
+}
+
+export async function getCompletionSurveyProgress(username: string): Promise<CompletionSurveyProgress | null> {
+  const key = `kg:completion-survey:${username}`;
+
+  if (kvEnabled()) {
+    const raw = await kvCommand(["GET", key]);
+    if (!raw) return null;
+
+    try {
+      return JSON.parse(raw) as CompletionSurveyProgress;
+    } catch {
+      return null;
+    }
+  }
+
+  const store = getMemoryStore();
+  return store.completionSurveyProgress.get(username) || null;
+}
+
+export async function saveCompletionSurveyProgress(
+  username: string,
+  progress: CompletionSurveyProgress,
+): Promise<void> {
+  const key = `kg:completion-survey:${username}`;
+
+  if (kvEnabled()) {
+    await kvCommand(["SET", key, JSON.stringify(progress)]);
+    return;
+  }
+
+  const store = getMemoryStore();
+  store.completionSurveyProgress.set(username, progress);
 }
