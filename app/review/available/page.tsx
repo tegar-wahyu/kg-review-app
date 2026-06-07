@@ -119,9 +119,14 @@ export default function AvailableCoursesPage() {
                 <h3>{course.title}</h3>
                 <p className="muted small">Pilih untuk mulai meninjau keterkaitan konsep pada mata pelajaran ini.</p>
               </div>
-              <button className="btn-primary" onClick={() => router.push(`/review/${course.id}`)}>
-                Mulai review
-              </button>
+              <div className="course-card-actions">
+                <button className="btn-outline" onClick={() => router.push(`/review/${encodeURIComponent(course.title || course.id)}/graph`)}>
+                  Lihat KG
+                </button>
+                <button className="btn-primary" onClick={() => router.push(`/review/${course.id}`)}>
+                  Mulai review
+                </button>
+              </div>
             </div>
           ))}
           {courses.length === 0 ? (

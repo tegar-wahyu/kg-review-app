@@ -5,6 +5,7 @@ export type ReviewRating = "correct" | "partial" | "wrong" | "missing";
 export type RelationNode = {
   type?: string;
   target?: string;
+  target_concept?: string;
   description?: string;
 };
 

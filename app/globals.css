@@ -258,6 +258,152 @@ textarea {
   font-weight: 700;
 }
 
+/* KG Viewer styles */
+.graph-page {
+  width: min(1420px, calc(100% - 2rem));
+}
+
+.graph-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 0.9rem;
+  align-items: center;
+  margin: 0.9rem 0 1rem;
+  padding: 0.75rem 0.85rem;
+  background: #ffffff;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-md);
+}
+
+.graph-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.graph-controls input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #2f80ed;
+}
+
+.graph-controls input[type="text"],
+.graph-controls input:not([type]) {
+  width: min(260px, 44vw);
+  border: 0.5px solid var(--color-border-secondary);
+  border-radius: 6px;
+  padding: 0.42rem 0.55rem;
+  color: var(--color-text-primary);
+  background: #ffffff;
+}
+
+.graph-tool-button {
+  padding: 0.42rem 0.7rem;
+}
+
+.graph-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.graph-canvas {
+  min-height: 720px;
+  background: #050505;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+}
+
+.node-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.6rem;
+}
+
+.node-bubble {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fff 0%, #fbfbfb 100%);
+  border: 1px solid var(--color-border-secondary);
+  cursor: pointer;
+  text-align: center;
+}
+
+.node-bubble:hover { box-shadow: 0 6px 18px rgba(28,40,56,0.06); }
+.node-selected { border-color: #3b82f6; box-shadow: 0 6px 20px rgba(59,130,246,0.08); }
+.node-neighbor { outline: 2px dashed rgba(59,130,246,0.08); }
+.node-badge { font-size: 11px; background: #fde68a; color: #92400e; padding: 2px 6px; border-radius: 999px; margin-left: 6px; }
+
+.detail-panel {
+  width: 100%;
+  max-height: 720px;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: 8px;
+  padding: 1rem;
+  background: var(--color-background-primary);
+  overflow: auto;
+}
+
+.detail-panel h2 {
+  font-size: 1.15rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.detail-panel h3,
+.detail-panel h4 {
+  margin-bottom: 0.35rem;
+}
+
+.detail-panel h4 {
+  margin-top: 0.95rem;
+}
+
+.detail-panel ul {
+  display: grid;
+  gap: 0.45rem;
+  padding-left: 1.05rem;
+}
+
+.detail-panel li {
+  overflow-wrap: anywhere;
+}
+
+.link-like { background: none; border: none; color: #0f62fe; cursor: pointer; padding: 0; }
+.small { font-size: 12px; }
+
+.cy-container {
+  width: 100%;
+  height: 100%;
+  min-height: 720px;
+  background: #050505;
+}
+
+@media (max-width: 980px) {
+  .graph-wrap {
+    grid-template-columns: 1fr;
+  }
+
+  .graph-canvas,
+  .cy-container {
+    min-height: 560px;
+  }
+
+  .detail-panel {
+    max-height: none;
+  }
+}
+
+
 .onboarding-phase-card.active .phase-status {
   background: #dcfce7;
   color: #166534;
@@ -376,6 +522,13 @@ textarea {
 .course-card-copy {
   display: grid;
   gap: 0.25rem;
+}
+
+.course-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 .course-card-label {
@@ -1703,6 +1856,16 @@ textarea {
   .course-card {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .course-card-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .course-card-actions .btn-outline,
+  .course-card-actions .btn-primary {
+    flex: 1 1 150px;
   }
 
   .available-header h1 {
