@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = resolve(__dirname, "..");
 const CANONICAL = resolve(APP_ROOT, "..", "data", "canonical");
-const OUT_DIR = join(APP_ROOT, "public", "kg-data");
+const OUT_DIR = join(APP_ROOT, "public", "kg-data", "canonical");
 
 const BOOK_FILES = [
   "Biologi Kelas XII",

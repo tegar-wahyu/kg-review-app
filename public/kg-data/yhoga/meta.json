@@ -1,0 +1,22 @@
+{
+  "source": "yhoga",
+  "generatedFrom": "yhoga Neo4j (NEO4J_*_YHOGA)",
+  "steps": [
+    {
+      "step": 3,
+      "key": "step3",
+      "label": "Completion",
+      "nodeCount": 103,
+      "relCount": 125,
+      "crossBookCount": 125
+    },
+    {
+      "step": 4,
+      "key": "step4",
+      "label": "Final",
+      "nodeCount": 878,
+      "relCount": 1184,
+      "crossBookCount": 125
+    }
+  ]
+}
