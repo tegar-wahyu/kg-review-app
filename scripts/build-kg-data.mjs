@@ -8,8 +8,10 @@
 //
 // Output graph shape (per step):
 //   { step, label, nodes: GraphNode[], relationships: GraphRel[] }
-//   GraphNode = { id, name, grade, description, stub }
-//   GraphRel  = { id, from, to, type, description, confidence, crossBook }
+//   GraphNode = { id, name, grade, description, stub, kind }
+//                kind = "concept" | "chapter" | "subtopic"
+//   GraphRel  = { id, from, to, type, description, confidence, crossBook,
+//                 structural }
 
 import { readFile, writeFile, mkdir, readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -27,47 +29,123 @@ const BOOK_FILES = [
   "Kimia Kelas XII",
 ];
 
-const nodeId = (grade, name) => `${grade}::${name}`.trim();
+const conceptId = (grade, name) => `${grade}::C::${name}`.trim();
+const chapterId = (grade, chapter) => `${grade}::B::${chapter}`.trim();
+const subtopicId = (grade, chapter, sub) =>
+  `${grade}::S::${chapter}::${sub}`.trim();
 
 // --- intra-book graph (extraction / consensus share one shape) -------------
+// Emits the full hierarchy as nodes + edges so the graph is well-connected:
+//   Chapter -[MEMUAT]-> Subtopic -[MEMUAT]-> Concept
+//   Chapter -[BERIKUTNYA]-> Chapter (sequence)
+//   Concept -[<relation.type>]-> Concept (or stub Concept)
 function buildIntraGraph(books) {
   const nodes = new Map();
   const rels = [];
   let relSeq = 0;
 
-  const ensureNode = (grade, name, description, stub) => {
-    const id = nodeId(grade, name);
+  const ensureConcept = (grade, name, description, stub) => {
+    const id = conceptId(grade, name);
     const existing = nodes.get(id);
     if (existing) {
-      // Upgrade a stub once we meet the real concept definition.
       if (existing.stub && !stub) {
         existing.stub = false;
         existing.description = description || existing.description;
       }
       return id;
     }
-    nodes.set(id, { id, name, grade, description: description || "", stub });
+    nodes.set(id, {
+      id,
+      name,
+      grade,
+      description: description || "",
+      stub,
+      kind: "concept",
+    });
     return id;
+  };
+
+  const ensureChapter = (grade, name, summary) => {
+    const id = chapterId(grade, name);
+    if (!nodes.has(id)) {
+      nodes.set(id, {
+        id,
+        name,
+        grade,
+        description: summary || "",
+        stub: false,
+        kind: "chapter",
+      });
+    }
+    return id;
+  };
+
+  const ensureSubtopic = (grade, chapter, name) => {
+    const id = subtopicId(grade, chapter, name);
+    if (!nodes.has(id)) {
+      nodes.set(id, {
+        id,
+        name,
+        grade,
+        description: "",
+        stub: false,
+        kind: "subtopic",
+      });
+    }
+    return id;
+  };
+
+  const addRel = (from, to, type, opts = {}) => {
+    rels.push({
+      id: `r${relSeq++}`,
+      from,
+      to,
+      type,
+      description: opts.description || "",
+      confidence: null,
+      crossBook: false,
+      structural: opts.structural || false,
+    });
   };
 
   for (const book of books) {
     const grade = book.grade;
-    for (const chapter of book.chapters || []) {
+    const chapters = book.chapters || [];
+
+    // Chapter sequence (BERIKUTNYA).
+    for (let i = 0; i < chapters.length - 1; i += 1) {
+      const a = chapters[i];
+      const b = chapters[i + 1];
+      if (!a?.chapter || !b?.chapter) continue;
+      const fromId = ensureChapter(grade, a.chapter, a.chapter_summary);
+      const toId = ensureChapter(grade, b.chapter, b.chapter_summary);
+      addRel(fromId, toId, "BERIKUTNYA", { structural: true });
+    }
+
+    for (const chapter of chapters) {
+      if (!chapter?.chapter) continue;
+      const chId = ensureChapter(grade, chapter.chapter, chapter.chapter_summary);
+
       for (const sub of chapter.subtopics || []) {
+        if (!sub?.name) continue;
+        const subId = ensureSubtopic(grade, chapter.chapter, sub.name);
+        addRel(chId, subId, "MEMUAT", { structural: true });
+
         for (const concept of sub.concepts || []) {
           if (!concept?.name) continue;
-          const fromId = ensureNode(grade, concept.name, concept.description, false);
+          const fromId = ensureConcept(
+            grade,
+            concept.name,
+            concept.description,
+            false,
+          );
+          addRel(subId, fromId, "MEMUAT", { structural: true });
+
           for (const rel of concept.relations || []) {
             if (!rel?.target) continue;
-            const toId = ensureNode(grade, rel.target, "", true);
-            rels.push({
-              id: `r${relSeq++}`,
-              from: fromId,
-              to: toId,
-              type: rel.type || "BERKAITAN_DENGAN",
+            const toId = ensureConcept(grade, rel.target, "", true);
+            addRel(fromId, toId, rel.type || "BERKAITAN_DENGAN", {
               description: rel.description || "",
-              confidence: null,
-              crossBook: false,
             });
           }
         }
@@ -85,7 +163,7 @@ function buildCrossGraph(payload, descLookup) {
   let relSeq = 0;
 
   const ensureNode = (grade, name) => {
-    const id = nodeId(grade, name);
+    const id = conceptId(grade, name);
     if (!nodes.has(id)) {
       nodes.set(id, {
         id,
@@ -93,6 +171,7 @@ function buildCrossGraph(payload, descLookup) {
         grade,
         description: descLookup.get(id) || "",
         stub: false,
+        kind: "concept",
       });
     }
     return id;
@@ -110,6 +189,7 @@ function buildCrossGraph(payload, descLookup) {
       description: props.description || "",
       confidence: typeof props.confidence === "number" ? props.confidence : null,
       crossBook: true,
+      structural: false,
     });
   }
 
@@ -171,9 +251,10 @@ async function main() {
   const step2 = buildIntraGraph(consensusBooks);
 
   // Description lookup for cross-book endpoints (prefer consensus definitions).
+  // Only pull from concept nodes; chapter summaries are not concept descriptions.
   const descLookup = new Map();
   for (const n of step2.nodes) {
-    if (n.description) descLookup.set(n.id, n.description);
+    if (n.kind === "concept" && n.description) descLookup.set(n.id, n.description);
   }
 
   console.log("Step 3 — completion (cross-book)");
@@ -200,14 +281,19 @@ async function main() {
       JSON.stringify(payload),
       "utf8",
     );
-    const realNodes = s.graph.nodes.filter((n) => !n.stub).length;
+    const concepts = s.graph.nodes.filter((n) => n.kind === "concept" && !n.stub).length;
+    const chapters = s.graph.nodes.filter((n) => n.kind === "chapter").length;
+    const subtopics = s.graph.nodes.filter((n) => n.kind === "subtopic").length;
     meta.steps.push({
       step: s.step,
       key: s.key,
       label: s.label,
       nodeCount: s.graph.nodes.length,
-      conceptCount: realNodes,
+      conceptCount: concepts,
+      chapterCount: chapters,
+      subtopicCount: subtopics,
       relCount: s.graph.relationships.length,
+      structuralCount: s.graph.relationships.filter((r) => r.structural).length,
       crossBookCount: s.graph.relationships.filter((r) => r.crossBook).length,
     });
     console.log(
