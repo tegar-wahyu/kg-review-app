@@ -18,7 +18,7 @@ type GraphNode = {
   grade: string;
   description: string;
   stub: boolean;
-  kind: "concept" | "chapter" | "subtopic";
+  kind: "concept" | "chapter" | "subtopic" | "grade";
 };
 type GraphRel = {
   id: string;
@@ -54,6 +54,7 @@ const BOOKS: Book[] = [
   { key: "Kimia", label: "Kimia", color: "#8b5cb8" },
 ];
 const STUB_COLOR = "#c4c7cd";
+const GRADE_COLOR = "#18181b";
 const CHAPTER_COLOR = "#3f3f46";
 const SUBTOPIC_COLOR = "#71717a";
 const CROSS_COLOR = "#2563eb";
@@ -66,10 +67,16 @@ function bookOf(grade: string): Book | null {
 }
 
 type EdgeScope = "all" | "intra" | "cross";
+type Source = "yhoga" | "canonical";
+
+// Steps that only exist as canonical file snapshots (never lived in yhoga).
+const CANONICAL_ONLY = new Set(["step1", "step2"]);
 
 export default function KgExplorer() {
+  const [source, setSource] = useState<Source>("yhoga");
   const [stepKey, setStepKey] = useState("step4");
   const [cache, setCache] = useState<Record<string, GraphData>>({});
+  const [fellBack, setFellBack] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [activeBooks, setActiveBooks] = useState<Set<string>>(
@@ -90,28 +97,59 @@ export default function KgExplorer() {
 
   const controlsRef = useRef<GraphCanvasHandle | null>(null);
 
-  const graph = cache[stepKey];
+  // For canonical-only steps, yhoga transparently falls back to canonical.
+  const effectiveSource: Source =
+    source === "yhoga" && CANONICAL_ONLY.has(stepKey) ? "canonical" : source;
+  const cacheKey = `${effectiveSource}:${stepKey}`;
+  const graph = cache[cacheKey];
 
-  // Load the active step's graph on demand.
+  // Load the active step's graph on demand, with fallback to canonical when a
+  // yhoga file is missing (e.g. only step3/step4 are dumped from the DB).
   useEffect(() => {
-    if (cache[stepKey]) {
+    if (cache[cacheKey]) {
       setLoading(false);
+      setFellBack(effectiveSource !== source);
       return;
     }
     let cancelled = false;
     setLoading(true);
-    fetch(`/kg-data/${stepKey}.json`, { cache: "force-cache" })
-      .then((r) => r.json())
-      .then((data: GraphData) => {
+
+    const load = async () => {
+      const tryFetch = async (src: Source) => {
+        const res = await fetch(`/kg-data/${src}/${stepKey}.json`, {
+          cache: "force-cache",
+        });
+        if (!res.ok) throw new Error(`${res.status}`);
+        return (await res.json()) as GraphData;
+      };
+
+      try {
+        let used = effectiveSource;
+        let data: GraphData;
+        try {
+          data = await tryFetch(effectiveSource);
+        } catch {
+          if (effectiveSource === "yhoga") {
+            used = "canonical";
+            data = await tryFetch("canonical");
+          } else {
+            throw new Error("unavailable");
+          }
+        }
         if (cancelled) return;
-        setCache((c) => ({ ...c, [stepKey]: data }));
+        setCache((c) => ({ ...c, [`${used}:${stepKey}`]: data }));
+        setFellBack(used !== source);
         setLoading(false);
-      })
-      .catch(() => !cancelled && setLoading(false));
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
     return () => {
       cancelled = true;
     };
-  }, [stepKey, cache]);
+  }, [cacheKey, stepKey, effectiveSource, source, cache]);
 
   // Reset relationship-type filter when the step changes.
   useEffect(() => {
@@ -178,7 +216,10 @@ export default function KgExplorer() {
 
         let color: string;
         let size: number;
-        if (n.kind === "chapter") {
+        if (n.kind === "grade") {
+          color = GRADE_COLOR;
+          size = 40;
+        } else if (n.kind === "chapter") {
           color = CHAPTER_COLOR;
           size = 32;
         } else if (n.kind === "subtopic") {
@@ -294,6 +335,31 @@ export default function KgExplorer() {
             </button>
           ))}
         </div>
+        <div className="kgx-source" role="group" aria-label="Sumber data">
+          {(
+            [
+              ["yhoga", "Neo4j"],
+              ["canonical", "Kanonik"],
+            ] as [Source, string][]
+          ).map(([val, label]) => (
+            <button
+              key={val}
+              className="kgx-src-btn"
+              aria-pressed={source === val}
+              onClick={() => {
+                setSource(val);
+                setSelected(null);
+              }}
+              title={
+                val === "yhoga"
+                  ? "Dump langsung dari basis data yhoga (sesuai Neo4j Browser)"
+                  : "Rekonstruksi dari berkas kanonik per tahap pipeline"
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </header>
 
       <div className="kgx-body">
@@ -400,6 +466,14 @@ export default function KgExplorer() {
         <main className="kgx-stage">
           <div className="kgx-stat">
             <b>{visibleNodeCount}</b> node · <b>{visibleRelCount}</b> relasi
+            {source === "yhoga" && !fellBack && graph ? (
+              <span className="kgx-badge">● yhoga</span>
+            ) : null}
+            {fellBack ? (
+              <span className="kgx-badge fb">
+                tahap ini hanya tersedia dari berkas kanonik
+              </span>
+            ) : null}
           </div>
 
           {loading || !graph ? (
@@ -486,11 +560,13 @@ export default function KgExplorer() {
             {selectedNode && (
               <>
                 <div className="kgx-kind">
-                  {selectedNode.kind === "chapter"
-                    ? "Bab"
-                    : selectedNode.kind === "subtopic"
-                      ? "Subbab"
-                      : "Konsep"}
+                  {selectedNode.kind === "grade"
+                    ? "Mata Pelajaran"
+                    : selectedNode.kind === "chapter"
+                      ? "Bab"
+                      : selectedNode.kind === "subtopic"
+                        ? "Subbab"
+                        : "Konsep"}
                 </div>
                 <h3>{selectedNode.name}</h3>
                 <span
