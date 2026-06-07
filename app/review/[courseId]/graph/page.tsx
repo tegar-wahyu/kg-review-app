@@ -3,6 +3,14 @@ import fs from "fs";
 import { extractTriples } from "@/lib/extract";
 import { getCourseById } from "@/lib/storage";
 
+function slugify(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
 export default async function GraphPage({ params }: { params: Promise<{ courseId: string }> }) {
   // Next 15 provides route params as a promise.
   const resolvedParams = await params;
@@ -30,11 +38,13 @@ export default async function GraphPage({ params }: { params: Promise<{ courseId
 
   // Prefer consensus file if present (basename.consensus.json), otherwise fall back to regular JSON
   let match: string | undefined;
+  const requestedSlug = slugify(courseId);
+  const fileBase = (file: string) => path.parse(file).name.replace(/\.consensus$/, "");
   // first try exact consensus match
-  match = files.find((f) => f.endsWith(".consensus.json") && path.parse(f).name.replace(/\.consensus$/, "") === courseId);
+  match = files.find((f) => f.endsWith(".consensus.json") && slugify(fileBase(f)) === requestedSlug);
   if (!match) {
     // try a plain .json match
-    match = files.find((f) => path.parse(f).name === courseId);
+    match = files.find((f) => slugify(fileBase(f)) === requestedSlug);
   }
 
   if (!match) {
@@ -54,16 +64,19 @@ export default async function GraphPage({ params }: { params: Promise<{ courseId
     const content = await fs.promises.readFile(path.join(kgDir, match), "utf8");
     const payload = JSON.parse(content);
     const basename = path.parse(match).name;
+    const datasetTitle = !Array.isArray(payload) && typeof payload?.grade === "string" && payload.grade.trim()
+      ? payload.grade.trim()
+      : basename;
 
     if (match.endsWith(".consensus.json")) {
       // load a consensus-mode viewer that preserves structure
       const ConsensusKGViewer = (await import("@/components/ConsensusKGViewer")).default;
-      return <ConsensusKGViewer payload={payload} datasetTitle={basename} />;
+      return <ConsensusKGViewer payload={payload} datasetTitle={datasetTitle} />;
     }
 
     const triples = extractTriples(payload);
     const KGViewer = (await import("@/components/KGViewer")).default;
-    return <KGViewer initialTriples={triples} datasetTitle={basename} />;
+    return <KGViewer initialTriples={triples} datasetTitle={datasetTitle} />;
   } catch (err) {
     return <main className="page-wrap">Gagal memuat file KG: {String(err)}</main>;
   }

@@ -4,6 +4,26 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CourseRecord } from "@/lib/types";
 
+type KGRecord = {
+  slug: string;
+  title: string;
+  hasConsensus: boolean;
+};
+
+const KG_FILES: KGRecord[] = [
+  { slug: "biologi-kelas-xii", title: "Biologi Kelas XII", hasConsensus: true },
+  { slug: "fisika-kelas-xii", title: "Fisika Kelas XII", hasConsensus: true },
+  { slug: "kimia-kelas-xii", title: "Kimia Kelas XII", hasConsensus: true },
+];
+
+function slugify(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
 export default function AvailableCoursesPage() {
   const router = useRouter();
   const [courses, setCourses] = useState<CourseRecord[]>([]);
@@ -102,6 +122,33 @@ export default function AvailableCoursesPage() {
         </div>
       </section>
 
+      <section className="course-section" aria-label="KG tersedia">
+        <div className="course-section-head">
+          <div>
+            <h2>KG tersedia</h2>
+            <p className="muted small">Buka visualisasi graf dari folder kg.</p>
+          </div>
+          <span className="course-count">{KG_FILES.length} KG</span>
+        </div>
+
+        <div className="course-list">
+          {KG_FILES.map((kg) => (
+            <div className="course-card available-course-card" key={kg.slug}>
+              <div className="course-card-copy">
+                <p className="course-card-label">{kg.hasConsensus ? "Consensus KG" : "KG"}</p>
+                <h3>{kg.title}</h3>
+                <p className="muted small">Lihat node dan relasi KG dalam tampilan graf.</p>
+              </div>
+              <div className="course-card-actions">
+                <button className="btn-primary" onClick={() => router.push(`/review/${kg.slug}/graph`)}>
+                  Lihat KG
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="course-section" aria-label="Daftar mata pelajaran">
         <div className="course-section-head">
           <div>
@@ -120,7 +167,7 @@ export default function AvailableCoursesPage() {
                 <p className="muted small">Pilih untuk mulai meninjau keterkaitan konsep pada mata pelajaran ini.</p>
               </div>
               <div className="course-card-actions">
-                <button className="btn-outline" onClick={() => router.push(`/review/${encodeURIComponent(course.title || course.id)}/graph`)}>
+                <button className="btn-outline" onClick={() => router.push(`/review/${slugify(course.title || course.id)}/graph`)}>
                   Lihat KG
                 </button>
                 <button className="btn-primary" onClick={() => router.push(`/review/${course.id}`)}>
