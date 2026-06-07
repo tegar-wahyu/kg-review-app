@@ -1,0 +1,41 @@
+{
+  "generatedFrom": "data/canonical",
+  "steps": [
+    {
+      "step": 1,
+      "key": "step1",
+      "label": "Ekstraksi",
+      "nodeCount": 790,
+      "conceptCount": 355,
+      "relCount": 612,
+      "crossBookCount": 0
+    },
+    {
+      "step": 2,
+      "key": "step2",
+      "label": "Konsensus",
+      "nodeCount": 717,
+      "conceptCount": 319,
+      "relCount": 557,
+      "crossBookCount": 0
+    },
+    {
+      "step": 3,
+      "key": "step3",
+      "label": "Completion",
+      "nodeCount": 103,
+      "conceptCount": 103,
+      "relCount": 125,
+      "crossBookCount": 125
+    },
+    {
+      "step": 4,
+      "key": "step4",
+      "label": "Final",
+      "nodeCount": 728,
+      "conceptCount": 330,
+      "relCount": 682,
+      "crossBookCount": 125
+    }
+  ]
+}
