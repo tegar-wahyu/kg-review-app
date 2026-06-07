@@ -18,6 +18,7 @@ type GraphNode = {
   grade: string;
   description: string;
   stub: boolean;
+  kind: "concept" | "chapter" | "subtopic";
 };
 type GraphRel = {
   id: string;
@@ -27,6 +28,7 @@ type GraphRel = {
   description: string;
   confidence: number | null;
   crossBook: boolean;
+  structural: boolean;
 };
 type GraphData = {
   step: number;
@@ -52,8 +54,11 @@ const BOOKS: Book[] = [
   { key: "Kimia", label: "Kimia", color: "#8b5cb8" },
 ];
 const STUB_COLOR = "#c4c7cd";
+const CHAPTER_COLOR = "#3f3f46";
+const SUBTOPIC_COLOR = "#71717a";
 const CROSS_COLOR = "#2563eb";
 const INTRA_COLOR = "#cbd0d8";
+const STRUCT_COLOR = "#d4d4d4";
 const MATCH_COLOR = "#1f2328";
 
 function bookOf(grade: string): Book | null {
@@ -73,6 +78,7 @@ export default function KgExplorer() {
   const [activeTypes, setActiveTypes] = useState<Set<string> | null>(null);
   const [edgeScope, setEdgeScope] = useState<EdgeScope>("all");
   const [showStubs, setShowStubs] = useState(true);
+  const [showStructure, setShowStructure] = useState(true);
   const [search, setSearch] = useState("");
   const [layout, setLayout] = useState<"forceDirected" | "hierarchical">(
     "forceDirected",
@@ -133,7 +139,7 @@ export default function KgExplorer() {
     const counts = new Map<string, number>();
     if (graph) {
       for (const n of graph.nodes) {
-        if (n.stub) continue;
+        if (n.kind !== "concept" || n.stub) continue;
         const b = bookOf(n.grade);
         if (b) counts.set(b.key, (counts.get(b.key) ?? 0) + 1);
       }
@@ -162,18 +168,39 @@ export default function KgExplorer() {
         const book = bookOf(n.grade);
         const bookKey = book?.key ?? "__other";
         if (book && !activeBooks.has(bookKey)) continue;
-        if (n.stub && !showStubs) continue;
+        if (n.kind === "concept" && n.stub && !showStubs) continue;
+        if (n.kind !== "concept" && !showStructure) continue;
         visible.add(n.id);
 
-        const isMatch = q.length > 0 && n.name.toLowerCase().includes(q);
+        const isMatch =
+          q.length > 0 && n.kind === "concept" && n.name.toLowerCase().includes(q);
         if (isMatch) matches += 1;
-        const color = n.stub ? STUB_COLOR : book?.color ?? "#7c8db5";
+
+        let color: string;
+        let size: number;
+        if (n.kind === "chapter") {
+          color = CHAPTER_COLOR;
+          size = 32;
+        } else if (n.kind === "subtopic") {
+          color = SUBTOPIC_COLOR;
+          size = 24;
+        } else if (n.stub) {
+          color = STUB_COLOR;
+          size = 16;
+        } else {
+          color = book?.color ?? "#7c8db5";
+          size = 22;
+        }
+        if (isMatch) {
+          color = MATCH_COLOR;
+          size = 34;
+        }
 
         nodes.push({
           id: n.id,
           caption: n.name,
-          color: isMatch ? MATCH_COLOR : color,
-          size: n.stub ? 16 : isMatch ? 34 : 22,
+          color,
+          size,
           selected: selected?.kind === "node" && selected.id === n.id,
         });
       }
@@ -184,12 +211,21 @@ export default function KgExplorer() {
         if (!typeSet.has(r.type)) continue;
         if (edgeScope === "intra" && r.crossBook) continue;
         if (edgeScope === "cross" && !r.crossBook) continue;
+        let color = INTRA_COLOR;
+        let width = 1;
+        if (r.crossBook) {
+          color = CROSS_COLOR;
+          width = 2.4;
+        } else if (r.structural) {
+          color = STRUCT_COLOR;
+          width = 1;
+        }
         rels.push({
           id: r.id,
           from: r.from,
           to: r.to,
-          color: r.crossBook ? CROSS_COLOR : INTRA_COLOR,
-          width: r.crossBook ? 2.4 : 1,
+          color,
+          width,
           selected: selected?.kind === "rel" && selected.id === r.id,
         });
       }
@@ -201,7 +237,7 @@ export default function KgExplorer() {
         visibleRelCount: rels.length,
         matchCount: matches,
       };
-    }, [graph, activeBooks, typeSet, edgeScope, showStubs, search, selected]);
+    }, [graph, activeBooks, typeSet, edgeScope, showStubs, showStructure, search, selected]);
 
   const selectedNode = useMemo(() => {
     if (!graph || selected?.kind !== "node") return null;
@@ -334,10 +370,18 @@ export default function KgExplorer() {
           <label className="kgx-check">
             <input
               type="checkbox"
+              checked={showStructure}
+              onChange={() => setShowStructure((v) => !v)}
+            />
+            Tampilkan bab &amp; subbab
+          </label>
+          <label className="kgx-check">
+            <input
+              type="checkbox"
               checked={showStubs}
               onChange={() => setShowStubs((v) => !v)}
             />
-            Tampilkan node rujukan
+            Tampilkan konsep rujukan
           </label>
           <label className="kgx-check">
             <input
@@ -385,6 +429,24 @@ export default function KgExplorer() {
                 {b.label}
               </div>
             ))}
+            {showStructure && (
+              <>
+                <div className="row">
+                  <span
+                    className="kgx-swatch"
+                    style={{ background: CHAPTER_COLOR, color: CHAPTER_COLOR }}
+                  />
+                  Bab
+                </div>
+                <div className="row">
+                  <span
+                    className="kgx-swatch"
+                    style={{ background: SUBTOPIC_COLOR, color: SUBTOPIC_COLOR }}
+                  />
+                  Subbab
+                </div>
+              </>
+            )}
             {hasCross && (
               <div className="row">
                 <span className="line" /> Relasi lintas buku
@@ -423,7 +485,13 @@ export default function KgExplorer() {
 
             {selectedNode && (
               <>
-                <div className="kgx-kind">Konsep</div>
+                <div className="kgx-kind">
+                  {selectedNode.kind === "chapter"
+                    ? "Bab"
+                    : selectedNode.kind === "subtopic"
+                      ? "Subbab"
+                      : "Konsep"}
+                </div>
                 <h3>{selectedNode.name}</h3>
                 <span
                   className="kgx-pill"
@@ -434,8 +502,8 @@ export default function KgExplorer() {
                 >
                   {selectedNode.grade}
                 </span>
-                {selectedNode.stub && (
-                  <span className="kgx-pill">node rujukan</span>
+                {selectedNode.kind === "concept" && selectedNode.stub && (
+                  <span className="kgx-pill">konsep rujukan</span>
                 )}
                 {selectedNode.description ? (
                   <LatexText
