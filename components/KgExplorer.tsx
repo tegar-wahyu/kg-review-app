@@ -11,14 +11,14 @@ const GraphCanvas = dynamic(() => import("@/components/GraphCanvas"), {
   loading: () => <div className="kgx-loading">memuat grafik…</div>,
 });
 
-// --- data shapes (match scripts/build-kg-data.mjs output) ------------------
+// --- normalized graph shapes ----------------------------------------------
 type GraphNode = {
   id: string;
   name: string;
   grade: string;
   description: string;
   stub: boolean;
-  kind: "concept" | "chapter" | "subtopic";
+  kind: "concept" | "chapter" | "subtopic" | "grade";
 };
 type GraphRel = {
   id: string;
@@ -31,19 +31,96 @@ type GraphRel = {
   structural: boolean;
 };
 type GraphData = {
-  step: number;
-  label: string;
   nodes: GraphNode[];
   relationships: GraphRel[];
 };
 
-type StepDef = { step: number; key: string; label: string; sub: string };
+// --- raw Neo4j export shapes (ta-latex/assets/kg-from-neo4j) ---------------
+// Nodes: { labels, props }. Edges reference nodes by positional index.
+type RawNode = {
+  id: string;
+  labels?: string[];
+  props?: Record<string, unknown>;
+};
+type RawEdge = {
+  source: string;
+  target: string;
+  type: string;
+  props?: Record<string, unknown>;
+};
+
+const STRUCTURAL = new Set(["HAS_CHAPTER", "HAS_SUBTOPIC", "HAS_CONCEPT"]);
+
+function kindOf(label: string): GraphNode["kind"] {
+  switch (label) {
+    case "Grade":
+      return "grade";
+    case "Chapter":
+      return "chapter";
+    case "Subtopic":
+      return "subtopic";
+    default:
+      return "concept";
+  }
+}
+
+function str(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
+// Convert a raw Neo4j export ({id,labels,props} nodes + {source,target,type}
+// edges keyed by elementId) into normalized GraphData. Edges whose endpoints
+// aren't in the node set are dropped defensively.
+function adapt(rawNodes: RawNode[], rawEdges: RawEdge[]): GraphData {
+  const nodes: GraphNode[] = rawNodes.map((n) => {
+    const label = n.labels?.[0] ?? "Concept";
+    const p = n.props ?? {};
+    const kind = kindOf(label);
+    return {
+      id: n.id,
+      name: str(p.name) || "(tanpa nama)",
+      grade: str(p.grade) || (kind === "grade" ? str(p.name) : ""),
+      description: str(p.description) || str(p.summary),
+      stub: label === "ConceptTarget",
+      kind,
+    };
+  });
+
+  const known = new Set(nodes.map((n) => n.id));
+  const relationships: GraphRel[] = [];
+  rawEdges.forEach((e, i) => {
+    if (!known.has(e.source) || !known.has(e.target)) return;
+    relationships.push({
+      id: `e${i}`,
+      from: e.source,
+      to: e.target,
+      type: e.type,
+      description: str(e.props?.description),
+      confidence:
+        typeof e.props?.confidence === "number" ? e.props.confidence : null,
+      crossBook: e.type.startsWith("LINTAS_BUKU"),
+      structural: STRUCTURAL.has(e.type),
+    });
+  });
+
+  return { nodes, relationships };
+}
+
+type StepDef = { key: string; file: string; label: string; sub: string };
 
 const STEPS: StepDef[] = [
-  { step: 1, key: "step1", label: "Ekstraksi", sub: "Topik mentah dari PDF" },
-  { step: 2, key: "step2", label: "Konsensus", sub: "Multi-judge + repair" },
-  { step: 3, key: "step3", label: "Completion", sub: "Edge lintas-buku" },
-  { step: 4, key: "step4", label: "Final", sub: "KG gabungan" },
+  {
+    key: "pre",
+    file: "01-pre-kgc",
+    label: "Pra-KGC",
+    sub: "Konsensus — sebelum completion",
+  },
+  {
+    key: "post",
+    file: "02-post-kgc",
+    label: "Pasca-KGC",
+    sub: "Setelah completion (+125 edge lintas-buku)",
+  },
 ];
 
 // --- book palette ----------------------------------------------------------
@@ -54,6 +131,7 @@ const BOOKS: Book[] = [
   { key: "Kimia", label: "Kimia", color: "#8b5cb8" },
 ];
 const STUB_COLOR = "#c4c7cd";
+const GRADE_COLOR = "#18181b";
 const CHAPTER_COLOR = "#3f3f46";
 const SUBTOPIC_COLOR = "#71717a";
 const CROSS_COLOR = "#2563eb";
@@ -68,7 +146,7 @@ function bookOf(grade: string): Book | null {
 type EdgeScope = "all" | "intra" | "cross";
 
 export default function KgExplorer() {
-  const [stepKey, setStepKey] = useState("step4");
+  const [stepKey, setStepKey] = useState("post");
   const [cache, setCache] = useState<Record<string, GraphData>>({});
   const [loading, setLoading] = useState(true);
 
@@ -90,9 +168,11 @@ export default function KgExplorer() {
 
   const controlsRef = useRef<GraphCanvasHandle | null>(null);
 
+  const stepDef = STEPS.find((s) => s.key === stepKey) ?? STEPS[0];
   const graph = cache[stepKey];
 
-  // Load the active step's graph on demand.
+  // Load the active step's two raw Neo4j export files (nodes + edges) and
+  // adapt them into the normalized GraphData the renderer expects.
   useEffect(() => {
     if (cache[stepKey]) {
       setLoading(false);
@@ -100,18 +180,29 @@ export default function KgExplorer() {
     }
     let cancelled = false;
     setLoading(true);
-    fetch(`/kg-data/${stepKey}.json`, { cache: "force-cache" })
-      .then((r) => r.json())
-      .then((data: GraphData) => {
+
+    const load = async () => {
+      try {
+        const [nodesRes, edgesRes] = await Promise.all([
+          fetch(`/kg-data/${stepDef.file}-nodes.json`, { cache: "force-cache" }),
+          fetch(`/kg-data/${stepDef.file}-edges.json`, { cache: "force-cache" }),
+        ]);
+        if (!nodesRes.ok || !edgesRes.ok) throw new Error("fetch failed");
+        const rawNodes = (await nodesRes.json()) as RawNode[];
+        const rawEdges = (await edgesRes.json()) as RawEdge[];
         if (cancelled) return;
-        setCache((c) => ({ ...c, [stepKey]: data }));
+        setCache((c) => ({ ...c, [stepKey]: adapt(rawNodes, rawEdges) }));
         setLoading(false);
-      })
-      .catch(() => !cancelled && setLoading(false));
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
     return () => {
       cancelled = true;
     };
-  }, [stepKey, cache]);
+  }, [stepKey, stepDef.file, cache]);
 
   // Reset relationship-type filter when the step changes.
   useEffect(() => {
@@ -178,7 +269,10 @@ export default function KgExplorer() {
 
         let color: string;
         let size: number;
-        if (n.kind === "chapter") {
+        if (n.kind === "grade") {
+          color = GRADE_COLOR;
+          size = 40;
+        } else if (n.kind === "chapter") {
           color = CHAPTER_COLOR;
           size = 32;
         } else if (n.kind === "subtopic") {
@@ -280,8 +374,8 @@ export default function KgExplorer() {
           </h1>
           <span>LLM-Assisted Knowledge Graph Completion</span>
         </div>
-        <div className="kgx-steps" role="group" aria-label="Tahap pipeline">
-          {STEPS.map((s) => (
+        <div className="kgx-steps" role="group" aria-label="Tahap completion">
+          {STEPS.map((s, i) => (
             <button
               key={s.key}
               className="kgx-step"
@@ -289,7 +383,7 @@ export default function KgExplorer() {
               onClick={() => setStepKey(s.key)}
               title={s.sub}
             >
-              <span className="num">{s.step}</span>
+              <span className="num">{i + 1}</span>
               {s.label}
             </button>
           ))}
@@ -400,6 +494,7 @@ export default function KgExplorer() {
         <main className="kgx-stage">
           <div className="kgx-stat">
             <b>{visibleNodeCount}</b> node · <b>{visibleRelCount}</b> relasi
+            <span className="kgx-badge">{stepDef.label}</span>
           </div>
 
           {loading || !graph ? (
@@ -486,11 +581,13 @@ export default function KgExplorer() {
             {selectedNode && (
               <>
                 <div className="kgx-kind">
-                  {selectedNode.kind === "chapter"
-                    ? "Bab"
-                    : selectedNode.kind === "subtopic"
-                      ? "Subbab"
-                      : "Konsep"}
+                  {selectedNode.kind === "grade"
+                    ? "Mata Pelajaran"
+                    : selectedNode.kind === "chapter"
+                      ? "Bab"
+                      : selectedNode.kind === "subtopic"
+                        ? "Subbab"
+                        : "Konsep"}
                 </div>
                 <h3>{selectedNode.name}</h3>
                 <span

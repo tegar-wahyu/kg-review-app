@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build:kg-data": "node scripts/build-kg-data.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "prepare:kg-data": "node scripts/prepare-kg-data.mjs"
   },
   "dependencies": {
     "@neo4j-nvl/base": "1.2.0",

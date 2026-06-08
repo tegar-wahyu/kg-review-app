@@ -103,6 +103,14 @@
   opacity: 0.8;
 }
 
+.kgx-badge {
+  margin-left: 0.7rem;
+  font-size: 0.66rem;
+  font-family: var(--kgx-mono);
+  letter-spacing: 0.05em;
+  color: var(--kgx-text-dim);
+}
+
 /* ---- body grid ---- */
 .kgx-body {
   position: relative;
