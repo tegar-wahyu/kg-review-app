@@ -11,7 +11,7 @@ const GraphCanvas = dynamic(() => import("@/components/GraphCanvas"), {
   loading: () => <div className="kgx-loading">memuat grafik…</div>,
 });
 
-// --- data shapes (match scripts/build-kg-data.mjs output) ------------------
+// --- normalized graph shapes ----------------------------------------------
 type GraphNode = {
   id: string;
   name: string;
@@ -31,19 +31,96 @@ type GraphRel = {
   structural: boolean;
 };
 type GraphData = {
-  step: number;
-  label: string;
   nodes: GraphNode[];
   relationships: GraphRel[];
 };
 
-type StepDef = { step: number; key: string; label: string; sub: string };
+// --- raw Neo4j export shapes (ta-latex/assets/kg-from-neo4j) ---------------
+// Nodes: { labels, props }. Edges reference nodes by positional index.
+type RawNode = {
+  id: string;
+  labels?: string[];
+  props?: Record<string, unknown>;
+};
+type RawEdge = {
+  source: string;
+  target: string;
+  type: string;
+  props?: Record<string, unknown>;
+};
+
+const STRUCTURAL = new Set(["HAS_CHAPTER", "HAS_SUBTOPIC", "HAS_CONCEPT"]);
+
+function kindOf(label: string): GraphNode["kind"] {
+  switch (label) {
+    case "Grade":
+      return "grade";
+    case "Chapter":
+      return "chapter";
+    case "Subtopic":
+      return "subtopic";
+    default:
+      return "concept";
+  }
+}
+
+function str(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
+// Convert a raw Neo4j export ({id,labels,props} nodes + {source,target,type}
+// edges keyed by elementId) into normalized GraphData. Edges whose endpoints
+// aren't in the node set are dropped defensively.
+function adapt(rawNodes: RawNode[], rawEdges: RawEdge[]): GraphData {
+  const nodes: GraphNode[] = rawNodes.map((n) => {
+    const label = n.labels?.[0] ?? "Concept";
+    const p = n.props ?? {};
+    const kind = kindOf(label);
+    return {
+      id: n.id,
+      name: str(p.name) || "(tanpa nama)",
+      grade: str(p.grade) || (kind === "grade" ? str(p.name) : ""),
+      description: str(p.description) || str(p.summary),
+      stub: label === "ConceptTarget",
+      kind,
+    };
+  });
+
+  const known = new Set(nodes.map((n) => n.id));
+  const relationships: GraphRel[] = [];
+  rawEdges.forEach((e, i) => {
+    if (!known.has(e.source) || !known.has(e.target)) return;
+    relationships.push({
+      id: `e${i}`,
+      from: e.source,
+      to: e.target,
+      type: e.type,
+      description: str(e.props?.description),
+      confidence:
+        typeof e.props?.confidence === "number" ? e.props.confidence : null,
+      crossBook: e.type.startsWith("LINTAS_BUKU"),
+      structural: STRUCTURAL.has(e.type),
+    });
+  });
+
+  return { nodes, relationships };
+}
+
+type StepDef = { key: string; file: string; label: string; sub: string };
 
 const STEPS: StepDef[] = [
-  { step: 1, key: "step1", label: "Ekstraksi", sub: "Topik mentah dari PDF" },
-  { step: 2, key: "step2", label: "Konsensus", sub: "Multi-judge + repair" },
-  { step: 3, key: "step3", label: "Completion", sub: "Edge lintas-buku" },
-  { step: 4, key: "step4", label: "Final", sub: "KG gabungan" },
+  {
+    key: "pre",
+    file: "01-pre-kgc",
+    label: "Pra-KGC",
+    sub: "Konsensus — sebelum completion",
+  },
+  {
+    key: "post",
+    file: "02-post-kgc",
+    label: "Pasca-KGC",
+    sub: "Setelah completion (+125 edge lintas-buku)",
+  },
 ];
 
 // --- book palette ----------------------------------------------------------
@@ -67,16 +144,10 @@ function bookOf(grade: string): Book | null {
 }
 
 type EdgeScope = "all" | "intra" | "cross";
-type Source = "yhoga" | "canonical";
-
-// Steps that only exist as canonical file snapshots (never lived in yhoga).
-const CANONICAL_ONLY = new Set(["step1", "step2"]);
 
 export default function KgExplorer() {
-  const [source, setSource] = useState<Source>("yhoga");
-  const [stepKey, setStepKey] = useState("step4");
+  const [stepKey, setStepKey] = useState("post");
   const [cache, setCache] = useState<Record<string, GraphData>>({});
-  const [fellBack, setFellBack] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [activeBooks, setActiveBooks] = useState<Set<string>>(
@@ -97,48 +168,30 @@ export default function KgExplorer() {
 
   const controlsRef = useRef<GraphCanvasHandle | null>(null);
 
-  // For canonical-only steps, yhoga transparently falls back to canonical.
-  const effectiveSource: Source =
-    source === "yhoga" && CANONICAL_ONLY.has(stepKey) ? "canonical" : source;
-  const cacheKey = `${effectiveSource}:${stepKey}`;
-  const graph = cache[cacheKey];
+  const stepDef = STEPS.find((s) => s.key === stepKey) ?? STEPS[0];
+  const graph = cache[stepKey];
 
-  // Load the active step's graph on demand, with fallback to canonical when a
-  // yhoga file is missing (e.g. only step3/step4 are dumped from the DB).
+  // Load the active step's two raw Neo4j export files (nodes + edges) and
+  // adapt them into the normalized GraphData the renderer expects.
   useEffect(() => {
-    if (cache[cacheKey]) {
+    if (cache[stepKey]) {
       setLoading(false);
-      setFellBack(effectiveSource !== source);
       return;
     }
     let cancelled = false;
     setLoading(true);
 
     const load = async () => {
-      const tryFetch = async (src: Source) => {
-        const res = await fetch(`/kg-data/${src}/${stepKey}.json`, {
-          cache: "force-cache",
-        });
-        if (!res.ok) throw new Error(`${res.status}`);
-        return (await res.json()) as GraphData;
-      };
-
       try {
-        let used = effectiveSource;
-        let data: GraphData;
-        try {
-          data = await tryFetch(effectiveSource);
-        } catch {
-          if (effectiveSource === "yhoga") {
-            used = "canonical";
-            data = await tryFetch("canonical");
-          } else {
-            throw new Error("unavailable");
-          }
-        }
+        const [nodesRes, edgesRes] = await Promise.all([
+          fetch(`/kg-data/${stepDef.file}-nodes.json`, { cache: "force-cache" }),
+          fetch(`/kg-data/${stepDef.file}-edges.json`, { cache: "force-cache" }),
+        ]);
+        if (!nodesRes.ok || !edgesRes.ok) throw new Error("fetch failed");
+        const rawNodes = (await nodesRes.json()) as RawNode[];
+        const rawEdges = (await edgesRes.json()) as RawEdge[];
         if (cancelled) return;
-        setCache((c) => ({ ...c, [`${used}:${stepKey}`]: data }));
-        setFellBack(used !== source);
+        setCache((c) => ({ ...c, [stepKey]: adapt(rawNodes, rawEdges) }));
         setLoading(false);
       } catch {
         if (!cancelled) setLoading(false);
@@ -149,7 +202,7 @@ export default function KgExplorer() {
     return () => {
       cancelled = true;
     };
-  }, [cacheKey, stepKey, effectiveSource, source, cache]);
+  }, [stepKey, stepDef.file, cache]);
 
   // Reset relationship-type filter when the step changes.
   useEffect(() => {
@@ -321,8 +374,8 @@ export default function KgExplorer() {
           </h1>
           <span>LLM-Assisted Knowledge Graph Completion</span>
         </div>
-        <div className="kgx-steps" role="group" aria-label="Tahap pipeline">
-          {STEPS.map((s) => (
+        <div className="kgx-steps" role="group" aria-label="Tahap completion">
+          {STEPS.map((s, i) => (
             <button
               key={s.key}
               className="kgx-step"
@@ -330,33 +383,8 @@ export default function KgExplorer() {
               onClick={() => setStepKey(s.key)}
               title={s.sub}
             >
-              <span className="num">{s.step}</span>
+              <span className="num">{i + 1}</span>
               {s.label}
-            </button>
-          ))}
-        </div>
-        <div className="kgx-source" role="group" aria-label="Sumber data">
-          {(
-            [
-              ["yhoga", "Neo4j"],
-              ["canonical", "Kanonik"],
-            ] as [Source, string][]
-          ).map(([val, label]) => (
-            <button
-              key={val}
-              className="kgx-src-btn"
-              aria-pressed={source === val}
-              onClick={() => {
-                setSource(val);
-                setSelected(null);
-              }}
-              title={
-                val === "yhoga"
-                  ? "Dump langsung dari basis data yhoga (sesuai Neo4j Browser)"
-                  : "Rekonstruksi dari berkas kanonik per tahap pipeline"
-              }
-            >
-              {label}
             </button>
           ))}
         </div>
@@ -466,14 +494,7 @@ export default function KgExplorer() {
         <main className="kgx-stage">
           <div className="kgx-stat">
             <b>{visibleNodeCount}</b> node · <b>{visibleRelCount}</b> relasi
-            {source === "yhoga" && !fellBack && graph ? (
-              <span className="kgx-badge">● yhoga</span>
-            ) : null}
-            {fellBack ? (
-              <span className="kgx-badge fb">
-                tahap ini hanya tersedia dari berkas kanonik
-              </span>
-            ) : null}
+            <span className="kgx-badge">{stepDef.label}</span>
           </div>
 
           {loading || !graph ? (
